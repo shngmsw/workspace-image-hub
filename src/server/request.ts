@@ -32,6 +32,18 @@ export async function readBodyCapped(req: Request, maxBytes: number): Promise<Ui
   return body;
 }
 
+/** One cookie's value, or undefined when absent or empty. */
+export function readCookie(req: Request, name: string): string | undefined {
+  for (const part of (req.headers.get("cookie") ?? "").split(";")) {
+    const eq = part.indexOf("=");
+    if (eq !== -1 && part.slice(0, eq).trim() === name) {
+      const value = part.slice(eq + 1).trim();
+      return value === "" ? undefined : value;
+    }
+  }
+  return undefined;
+}
+
 /** A capped body parsed as JSON; undefined when it is too large or not JSON. */
 export async function readJsonCapped(req: Request, maxBytes: number): Promise<unknown> {
   try {

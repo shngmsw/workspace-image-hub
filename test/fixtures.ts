@@ -2,10 +2,10 @@
 
 import sharp from "sharp";
 
-const bytes = (buffer: Buffer): Uint8Array => new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+const bytes = (buffer: Buffer): Uint8Array<ArrayBuffer> => new Uint8Array(buffer);
 
 /** Photo-like: low-resolution noise scaled up, so neither PNG nor WebP compresses it trivially. */
-export async function photoPng(width: number, height: number): Promise<Uint8Array> {
+export async function photoPng(width: number, height: number): Promise<Uint8Array<ArrayBuffer>> {
   const seed = await sharp({
     create: {
       width: Math.ceil(width / 12),
@@ -20,11 +20,11 @@ export async function photoPng(width: number, height: number): Promise<Uint8Arra
   return bytes(await sharp(seed).resize(width, height, { kernel: "cubic" }).png().toBuffer());
 }
 
-export async function solidPng(width: number, height: number): Promise<Uint8Array> {
+export async function solidPng(width: number, height: number): Promise<Uint8Array<ArrayBuffer>> {
   return bytes(await sharp({ create: { width, height, channels: 3, background: "#3a7" } }).png().toBuffer());
 }
 
-export async function animatedGif(width: number, frameHeight: number, frames: number): Promise<Uint8Array> {
+export async function animatedGif(width: number, frameHeight: number, frames: number): Promise<Uint8Array<ArrayBuffer>> {
   const colours = ["#e33", "#3e3", "#33e", "#ee3", "#3ee", "#e3e"];
   const pages = await Promise.all(
     Array.from({ length: frames }, (_, i) =>
@@ -41,7 +41,7 @@ export async function animatedGif(width: number, frameHeight: number, frames: nu
 }
 
 /** EXIF orientation 6 means "rotate 90° clockwise to display", so the displayed image is height x width. */
-export async function orientedJpeg(width: number, height: number, orientation: number): Promise<Uint8Array> {
+export async function orientedJpeg(width: number, height: number, orientation: number): Promise<Uint8Array<ArrayBuffer>> {
   return bytes(
     await sharp({ create: { width, height, channels: 3, background: "#888" } })
       .jpeg()

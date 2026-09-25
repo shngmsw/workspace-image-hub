@@ -19,7 +19,7 @@ import { jwtVerify, SignJWT } from "jose";
 import type { AuthErrorCode, SignInFailure } from "../shared/api";
 import { parseSignInRequest } from "../shared/api";
 import { cleanDisplayName, type Email, emailDomain, parseEmail } from "../shared/domain";
-import { readJsonCapped } from "./body";
+import { readCookie, readJsonCapped } from "./request";
 import type { AccessPolicy, Config } from "./config";
 import { HttpError } from "./errors";
 import type { Logger } from "./log";
@@ -276,17 +276,6 @@ export function createAuth(config: Pick<Config, "appUrl" | "auth" | "access">, l
       return actor;
     },
   };
-}
-
-function readCookie(req: Request, name: string): string | undefined {
-  for (const part of (req.headers.get("cookie") ?? "").split(";")) {
-    const eq = part.indexOf("=");
-    if (eq !== -1 && part.slice(0, eq).trim() === name) {
-      const value = part.slice(eq + 1).trim();
-      return value === "" ? undefined : value;
-    }
-  }
-  return undefined;
 }
 
 function sameText(a: string, b: string): boolean {
