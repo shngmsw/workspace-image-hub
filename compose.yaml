@@ -1,0 +1,15 @@
+# Local-disk install. Copy .env.example to .env, fill APP_URL, AUTH_SECRET, GOOGLE_CLIENT_ID and
+# ALLOWED_DOMAINS (or ALLOWED_EMAILS), then `docker compose up -d`. Images and records live in the
+# named volume, which supports the hard links the local store needs.
+services:
+  hub:
+    image: ghcr.io/shngmsw/workspace-image-hub:latest
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - hub-data:/data
+    restart: unless-stopped
+
+volumes:
+  hub-data: {}
