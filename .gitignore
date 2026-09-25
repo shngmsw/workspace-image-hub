@@ -1,8 +1,7 @@
 node_modules/
-.next/
+dist/
 data/
+coverage/
 .env
 .env.local
-coverage/
 *.tsbuildinfo
-next-env.d.ts
