@@ -21,7 +21,7 @@ const envBans = [
 ];
 
 export default defineConfig(
-  { ignores: ["dist/", "coverage/", "data/", "node_modules/"] },
+  { ignores: ["dist/", "coverage/", "data/", "node_modules/", ".claude/"] },
   js.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
