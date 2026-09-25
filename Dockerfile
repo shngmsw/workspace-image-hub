@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:24-slim AS base
 ENV PNPM_HOME=/pnpm COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
@@ -7,12 +5,12 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --store-dir /pnpm/store
+RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
 FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --store-dir /pnpm/store
+RUN pnpm install --prod --frozen-lockfile
 
 FROM node:24-slim
 WORKDIR /app
