@@ -24,9 +24,32 @@ Workspace Image Hub は、Google Workspace を使う組織向けのセルフホ�
 
 Google Chat の着信 Webhook のアバターは、Webhook の設定にあるアバター URL の欄で決まります。ここに、アプリでコピーした URL をそのまま貼り付けてください。この欄は URL しか受け取らないので、JSON 形式のコピーは用意していません。
 
-## Docker Compose で動かす
+## 動かし方
 
-必要なのは Compose プラグイン入りの Docker と、後述の [Google Cloud 側の準備](#google-cloud-側の準備) で作る OAuth クライアント ID です。まず試すだけなら、OAuth クライアントの承認済みの JavaScript 生成元に `http://localhost:3000` を登録しておきます。
+動かし方は 2 通りあります。どちらも同じ Docker イメージを使い、違うのは置き場所と画像の保存先です。
+
+| | 方法 1: Docker Compose | 方法 2: Cloud Run |
+|---|---|---|
+| 置き場所 | 自分のサーバーや PC | Google Cloud |
+| 画像の保存先 | Docker ボリューム（ローカルディスク） | Cloud Storage のバケット |
+| 台数 | 1 台 | アクセスに応じて自動で増減 |
+| 向いている場面 | まず試す、社内サーバーで小さく使う | サーバーを持たずに運用する |
+
+どちらの方法でも、先に Google Cloud で OAuth クライアント ID を作ります。
+
+### 共通の準備: Google Cloud
+
+組織ごとに 1 回だけ行います。プロジェクトは Workspace の組織に属するものを使ってください。
+
+1. OAuth 同意画面を設定します。ログインする人が全員この組織のアカウントなら「内部」を選びます。`ALLOWED_EMAILS` に組織外のアカウントを入れる予定があるなら「外部」にします。
+2. OAuth クライアント ID を、アプリケーションの種類「ウェブ アプリケーション」で作ります。承認済みの JavaScript 生成元に、`APP_URL` に設定する値をパスなしでそのまま登録します。承認済みのリダイレクト URI は空のままで構いません。このアプリは「Google でログイン」ボタンが返す ID トークンをサーバーで検証する方式なので、リダイレクトもクライアント シークレットも使いません。できたクライアント ID を `GOOGLE_CLIENT_ID` に入れます。
+3. ドライブから取り込みたい場合だけ、Google Picker API と Google Drive API を有効にして、API キーを作ります。キーには制限を 2 つかけてください。アプリケーションの制限はウェブサイトで `APP_URL/*`、API の制限は Google Picker API だけです。このキーを `GOOGLE_PICKER_API_KEY` に入れます。未設定の間はドライブのボタンが表示されません。
+
+API キーはピッカーの仕様上ページに埋め込むものなので、ログインした人には見えます。よそのサイトから使われないように守っているのはリファラー制限です。ピッカーには Cloud プロジェクト番号も必要ですが、普通はクライアント ID の先頭（`123456789012-...` の数字の部分）から取れます。数字で始まらないクライアント ID のときだけ `GOOGLE_PROJECT_NUMBER` を設定してください。初めてドライブから取り込むとき、利用者には `drive.file` スコープの同意画面が出ます。このスコープで触れるのは、その人がピッカーで選んだファイルだけです。
+
+### 方法 1: Docker Compose（ローカルディスクに保存）
+
+必要なのは Compose プラグイン入りの Docker と、上の [共通の準備](#共通の準備-google-cloud) で作る OAuth クライアント ID です。まず試すだけなら、OAuth クライアントの承認済みの JavaScript 生成元に `http://localhost:3000` を登録しておきます。
 
 ```sh
 mkdir image-hub && cd image-hub
@@ -47,7 +70,11 @@ ALLOWED_DOMAINS=example.com
 docker compose up -d
 ```
 
-http://localhost:3000 を開いて、`example.com` の Google アカウントでログインします。画像と記録は名前付きボリューム `hub-data`（コンテナ内の `/data`）に入ります。中身は `i/` が画像、`r/` が記録で、このボリュームを丸ごとコピーすればバックアップになります。
+http://localhost:3000 を開いて、`example.com` の Google アカウントでログインします。保存先は Docker の名前付きボリューム `hub-data` です。コンテナの中では `/data` に見え、`i/` に画像、`r/` に記録（登録した人、元のファイル名、タグ）が入ります。このボリュームを丸ごとコピーすればバックアップになります。
+
+ホスト側の実際の場所は Docker が管理しています。Compose はボリューム名の頭にプロジェクト名（既定はフォルダ名）を付けるので、上の手順どおり `image-hub` フォルダで動かした場合は `docker volume inspect image-hub_hub-data` の `Mountpoint` で場所が分かります。ボリュームは `docker compose down` では消えず、`docker compose down -v` を実行したときだけ消えます。
+
+Linux のホストで、ボリュームではなくホストのフォルダに直接置きたい場合は、`compose.yaml` の `hub-data:/data` を `./data:/data` に書き換えます。コンテナは uid 1000 で動くので、そのフォルダに uid 1000 が書き込めるようにしておいてください。
 
 TLS を終端するリバースプロキシの後ろに置くときは、`APP_URL` を `https://img.example.com` のような https のオリジンにして、そのオリジンを OAuth クライアントにも登録します。変えるのはそれだけです。http のままだとセッション Cookie に `Secure` が付かず、起動時のログに警告が出ます。
 
@@ -55,17 +82,7 @@ TLS を終端するリバースプロキシの後ろに置くときは、`APP_UR
 
 `compose.yaml` が参照するイメージは `ghcr.io/shngmsw/workspace-image-hub:latest` です。`v1.2.3` のようなタグを打つと `latest`、`1.2.3`、`1.2`、`1` が公開され、`main` への push ごとに `edge` が更新されます。
 
-## Google Cloud 側の準備
-
-組織ごとに 1 回だけ行います。プロジェクトは Workspace の組織に属するものを使ってください。
-
-1. OAuth 同意画面を設定します。ログインする人が全員この組織のアカウントなら「内部」を選びます。`ALLOWED_EMAILS` に組織外のアカウントを入れる予定があるなら「外部」にします。
-2. OAuth クライアント ID を、アプリケーションの種類「ウェブ アプリケーション」で作ります。承認済みの JavaScript 生成元に、`APP_URL` に設定する値をパスなしでそのまま登録します。承認済みのリダイレクト URI は空のままで構いません。このアプリは「Google でログイン」ボタンが返す ID トークンをサーバーで検証する方式なので、リダイレクトもクライアント シークレットも使いません。できたクライアント ID を `GOOGLE_CLIENT_ID` に入れます。
-3. ドライブから取り込みたい場合だけ、Google Picker API と Google Drive API を有効にして、API キーを作ります。キーには制限を 2 つかけてください。アプリケーションの制限はウェブサイトで `APP_URL/*`、API の制限は Google Picker API だけです。このキーを `GOOGLE_PICKER_API_KEY` に入れます。未設定の間はドライブのボタンが表示されません。
-
-API キーはピッカーの仕様上ページに埋め込むものなので、ログインした人には見えます。よそのサイトから使われないように守っているのはリファラー制限です。ピッカーには Cloud プロジェクト番号も必要ですが、普通はクライアント ID の先頭（`123456789012-...` の数字の部分）から取れます。数字で始まらないクライアント ID のときだけ `GOOGLE_PROJECT_NUMBER` を設定してください。初めてドライブから取り込むとき、利用者には `drive.file` スコープの同意画面が出ます。このスコープで触れるのは、その人がピッカーで選んだファイルだけです。
-
-## Cloud Run と Cloud Storage で動かす
+### 方法 2: Cloud Run と Cloud Storage
 
 Cloud Run のディスクは消えるので、`STORAGE_DRIVER=local` はそこでは起動を拒否します。バケットを 2 つ使います。
 

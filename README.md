@@ -24,9 +24,32 @@ Sign-in is Google's "Sign in with Google" button, limited to the Workspace domai
 
 A Chat incoming webhook takes its avatar from the **Avatar URL** field in the webhook's settings. Copy the URL from the app and paste it there. The field takes a plain URL, so the app offers no JSON copy format.
 
-## Run it with Docker Compose
+## Deploy
 
-You need Docker with the Compose plugin and an OAuth client id from [Set up Google Cloud](#set-up-google-cloud). For this quick start, register `http://localhost:3000` as the client's authorized JavaScript origin.
+There are two ways to run the app. Both use the same Docker image. They differ in where the app runs and where the images are stored.
+
+| | Option 1: Docker Compose | Option 2: Cloud Run |
+|---|---|---|
+| Runs on | Your own server or PC | Google Cloud |
+| Images stored in | A Docker volume on local disk | Cloud Storage buckets |
+| Instances | One | Scales with traffic |
+| Good for | Trying it out, a small internal server | Running without a server to maintain |
+
+Either way, create an OAuth client id in Google Cloud first.
+
+### Common setup: Google Cloud
+
+Do this once per organization, in a Google Cloud project that belongs to your Workspace organization.
+
+1. Configure the OAuth consent screen. Choose **Internal** when everyone who signs in has an account in your organization. Choose **External** when `ALLOWED_EMAILS` will include accounts outside it.
+2. Create an OAuth client id of type **Web application**. Under **Authorized JavaScript origins**, add the exact value you will put in `APP_URL`, with no path. Leave **Authorized redirect URIs** empty. The app renders the Sign in with Google button and verifies the returned ID token on the server, so there is no redirect and no client secret. Put the client id in `GOOGLE_CLIENT_ID`.
+3. For Drive import only, enable the Google Picker API and the Google Drive API, then create an API key and restrict it twice. Under application restrictions, allow the website `APP_URL/*`. Under API restrictions, allow only the Google Picker API. Put the key in `GOOGLE_PICKER_API_KEY`. While the key is unset, the Drive button does not appear.
+
+The Picker requires the API key in the page, so every signed-in browser can see it. The referrer restriction is what stops other sites from using it. The Picker also needs your Cloud project number. A client id normally begins with that number (`123456789012-...`), and the app reads it from there. If your client id does not start with digits, set `GOOGLE_PROJECT_NUMBER`. The first Drive import asks the user to grant the `drive.file` scope, which covers only the files that user picks.
+
+### Option 1: Docker Compose (local disk)
+
+You need Docker with the Compose plugin and an OAuth client id from [Common setup](#common-setup-google-cloud). For this quick start, register `http://localhost:3000` as the client's authorized JavaScript origin.
 
 ```sh
 mkdir image-hub && cd image-hub
@@ -47,7 +70,11 @@ ALLOWED_DOMAINS=example.com
 docker compose up -d
 ```
 
-Open http://localhost:3000 and sign in with a Google account on `example.com`. Images and records live in the named volume `hub-data`, mounted at `/data`. Inside it, `i/` holds the images and `r/` holds the records. Copy that volume and you have a backup.
+Open http://localhost:3000 and sign in with a Google account on `example.com`. Images and records live in the Docker named volume `hub-data`, mounted at `/data` inside the container. `i/` holds the images and `r/` holds the records (uploader, original file name, tags). Copy that volume and you have a backup.
+
+Docker manages where the volume lives on the host. Compose prefixes the volume name with the project name, which defaults to the folder name, so with the steps above the volume is `image-hub_hub-data` and `docker volume inspect image-hub_hub-data` shows its `Mountpoint`. `docker compose down` keeps the volume. Only `docker compose down -v` deletes it.
+
+On a Linux host, to keep the data in a host folder instead of a volume, change `hub-data:/data` in `compose.yaml` to `./data:/data`. The container runs as uid 1000, so that folder must be writable by uid 1000.
 
 To run behind a TLS reverse proxy, set `APP_URL` to the https origin, for example `https://img.example.com`, and add that origin to the OAuth client. Nothing else changes. Over plain http, the session cookie is sent without the `Secure` flag, and the log says so at startup.
 
@@ -55,17 +82,7 @@ If a value is wrong, the container exits with code 78 and the log lists every pr
 
 `compose.yaml` pulls `ghcr.io/shngmsw/workspace-image-hub:latest`. A release tag such as `v1.2.3` publishes `latest`, `1.2.3`, `1.2`, and `1`. Every push to `main` publishes `edge`.
 
-## Set up Google Cloud
-
-Do this once per organization, in a Google Cloud project that belongs to your Workspace organization.
-
-1. Configure the OAuth consent screen. Choose **Internal** when everyone who signs in has an account in your organization. Choose **External** when `ALLOWED_EMAILS` will include accounts outside it.
-2. Create an OAuth client id of type **Web application**. Under **Authorized JavaScript origins**, add the exact value you will put in `APP_URL`, with no path. Leave **Authorized redirect URIs** empty. The app renders the Sign in with Google button and verifies the returned ID token on the server, so there is no redirect and no client secret. Put the client id in `GOOGLE_CLIENT_ID`.
-3. For Drive import only, enable the Google Picker API and the Google Drive API, then create an API key and restrict it twice. Under application restrictions, allow the website `APP_URL/*`. Under API restrictions, allow only the Google Picker API. Put the key in `GOOGLE_PICKER_API_KEY`. While the key is unset, the Drive button does not appear.
-
-The Picker requires the API key in the page, so every signed-in browser can see it. The referrer restriction is what stops other sites from using it. The Picker also needs your Cloud project number. A client id normally begins with that number (`123456789012-...`), and the app reads it from there. If your client id does not start with digits, set `GOOGLE_PROJECT_NUMBER`. The first Drive import asks the user to grant the `drive.file` scope, which covers only the files that user picks.
-
-## Deploy to Cloud Run with Cloud Storage
+### Option 2: Cloud Run with Cloud Storage
 
 Cloud Run's disk is ephemeral, so the app refuses `STORAGE_DRIVER=local` there. Use two buckets.
 
