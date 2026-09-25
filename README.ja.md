@@ -109,6 +109,7 @@ gcloud storage buckets create "gs://$PROJECT_ID-hub-public" --location="$REGION"
   --uniform-bucket-level-access
 gcloud iam roles create hubObjectGet --project="$PROJECT_ID" \
   --title="Get objects by name" --permissions=storage.objects.get
+# 作った直後のロールはまだ使えず「Role ... does not exist」になることがある。その場合は数十秒待って再実行する
 gcloud storage buckets add-iam-policy-binding "gs://$PROJECT_ID-hub-public" \
   --member=allUsers --role="projects/$PROJECT_ID/roles/hubObjectGet"
 

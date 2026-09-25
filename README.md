@@ -109,6 +109,7 @@ gcloud storage buckets create "gs://$PROJECT_ID-hub-public" --location="$REGION"
   --uniform-bucket-level-access
 gcloud iam roles create hubObjectGet --project="$PROJECT_ID" \
   --title="Get objects by name" --permissions=storage.objects.get
+# A new custom role can take a few seconds to become usable. If this fails with "Role ... does not exist", wait and rerun it.
 gcloud storage buckets add-iam-policy-binding "gs://$PROJECT_ID-hub-public" \
   --member=allUsers --role="projects/$PROJECT_ID/roles/hubObjectGet"
 
