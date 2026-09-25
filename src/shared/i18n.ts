@@ -1,12 +1,3 @@
-/**
- * UI strings for ja and en. All user-facing prose lives here, in the browser bundle; the server
- * sends codes (ErrorCode, AuthErrorCode, InputIssue) and the client translates them.
- *
- * `Messages` is an explicit interface and both dictionaries are annotated with it, so a key missing
- * from either language is a compile error, not a runtime blank. No i18n library: two locales, no
- * plurals that need CLDR rules, and interpolation is ordinary function arguments.
- */
-
 import type { AuthErrorCode, ClientErrorCode, ErrorCode } from "./api";
 import type { InputIssue } from "./domain";
 import { TAG_MAX_CHARS, TAGS_MAX } from "./domain";
@@ -16,17 +7,12 @@ export type Locale = "ja" | "en";
 export const LOCALES: readonly Locale[] = ["ja", "en"];
 export const DEFAULT_LOCALE: Locale = "en";
 
-/** Set by the language toggle (client-side `document.cookie`, not HttpOnly; it is a preference). */
 export const LOCALE_COOKIE = "wih_locale";
 
 export function parseLocale(raw: string | null | undefined): Locale | null {
   return LOCALES.find((l) => l === raw) ?? null;
 }
 
-/**
- * Resolution order: APP_LOCALE when pinned -> toggle cookie -> Accept-Language (q-weighted,
- * primary subtag) -> DEFAULT_LOCALE.
- */
 export function negotiateLocale(input: {
   readonly pinned: Locale | null;
   readonly cookie: string | undefined;
@@ -54,10 +40,8 @@ export function negotiateLocale(input: {
 export interface Messages {
   readonly signIn: {
     readonly tagline: string;
-    /** Allowed domains, already formatted as "@a.com, @b.com". */
     readonly hint: (domains: string) => string;
     readonly signingIn: string;
-    /** The Google button script did not load (blocked by an extension, proxy or offline). */
     readonly unavailable: string;
     readonly errors: Readonly<Record<AuthErrorCode, string>>;
   };
@@ -78,13 +62,11 @@ export interface Messages {
     readonly queued: string;
     readonly fetchingFromDrive: string;
     readonly uploading: (percent: number) => string;
-    /** Bytes are on the server; sharp is working. */
     readonly converting: string;
     readonly retry: string;
     readonly cancel: string;
     readonly dismiss: string;
     readonly clearFinished: string;
-    /** e.g. "3.5 MB → 210 KB (94% smaller)" / "3.5 MB → 210 KB（94% 削減）" */
     readonly reduction: (from: string, to: string, percent: number) => string;
     readonly grew: (from: string, to: string, percent: number) => string;
   };
@@ -112,7 +94,6 @@ export interface Messages {
     readonly cancel: string;
     readonly delete: string;
     readonly confirmDelete: (name: string) => string;
-    /** Deleting cannot recall copies already cached downstream (see Hub.remove). */
     readonly deleteCacheWarning: string;
   };
   readonly errors: Readonly<Record<ErrorCode | ClientErrorCode, string>>;
@@ -293,7 +274,6 @@ export const ja: Messages = {
 
 export const messages: Readonly<Record<Locale, Messages>> = { en, ja };
 
-/** 1234567 -> "1.2 MB"; decimal units (KB = 1000 B), as file managers show. */
 export function formatBytes(bytes: number, locale: Locale): string {
   const units = ["B", "KB", "MB", "GB"] as const;
   let value = bytes;
@@ -307,7 +287,6 @@ export function formatBytes(bytes: number, locale: Locale): string {
   return `${number} ${units[unit] ?? "B"}`;
 }
 
-/** Picks `reduction` or `grew` (WebP can be larger than an already tiny PNG) and formats it. */
 export function formatSizeChange(originalBytes: number, storedBytes: number, locale: Locale): string {
   const m = messages[locale].upload;
   const from = formatBytes(originalBytes, locale);

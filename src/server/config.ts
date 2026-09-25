@@ -1,30 +1,16 @@
-/**
- * Turns the environment into a typed `Config`. It runs once at startup, parses every variable, and
- * refuses to start on any problem, listing all of them at once. Everything downstream receives
- * `Config` (or a slice of it) and never re-validates. main.ts passes `process.env` in; this module
- * never reads it itself.
- *
- * `ENV_VARS` is the single source of truth for names, defaults, and docs. `.env.example` (and the
- * README tables, when present) are generated from it by `pnpm gen:env-docs`, checked in CI.
- */
-
 import type { DriveBootConfig } from "../shared/api";
 import { type Email, emailDomain, parseEmail } from "../shared/domain";
 import { type Locale, parseLocale } from "../shared/i18n";
 import type { TranscodePolicy } from "./image";
-
-// ── Spec ────────────────────────────────────────────────────────────────────────────────────
 
 export type EnvGroup = "Core" | "Auth" | "Google Drive import" | "Storage" | "Image policy";
 
 export interface EnvVarSpec {
   readonly name: string;
   readonly group: EnvGroup;
-  /** `true`, `false`, or the condition under which it becomes required. */
   readonly required: boolean | "gcs";
   readonly default?: string;
   readonly secret?: true;
-  /** Placeholder written to `.env.example` for required variables. */
   readonly example?: string;
   readonly doc: string;
 }
@@ -55,26 +41,15 @@ export const ENV_VARS = [
 
 export type EnvName = (typeof ENV_VARS)[number]["name"];
 
-// ── Parsed config ───────────────────────────────────────────────────────────────────────────
-
-/** Where bytes and records live. A discriminated union: no bag of optionals per driver. */
 export type StorageConfig =
   | { readonly driver: "local"; readonly dataDir: string }
   | {
       readonly driver: "gcs";
-      /** Private. Always holds records; holds images too when `publicBucket` is null. */
       readonly bucket: string;
-      /** Public-read, images only. Never equal to `bucket` (loadConfig enforces). */
       readonly publicBucket: string | null;
     };
 
-/**
- * Who may sign in and who is an admin.
- * Invariant (enforced by loadConfig): `domains.size + emails.size > 0`. An empty allow-list is a
- * startup error, never "allow everyone".
- */
 export interface AccessPolicy {
-  /** Lowercased, exact. Set membership against `hd` / email domain; no suffixes, no wildcards. */
   readonly domains: ReadonlySet<string>;
   readonly emails: ReadonlySet<Email>;
   readonly admins: ReadonlySet<Email>;
@@ -86,7 +61,6 @@ export interface ImagePolicy extends TranscodePolicy {
 
 export interface Config {
   readonly port: number;
-  /** Origin only (`pathname === "/"`). Every absolute URL the server builds derives from it. */
   readonly appUrl: URL;
   readonly appName: string;
   readonly pinnedLocale: Locale | null;
@@ -98,10 +72,8 @@ export interface Config {
   readonly access: AccessPolicy;
   readonly drive: DriveBootConfig | null;
   readonly storage: StorageConfig;
-  /** No trailing slash. Derived by `derivePublicBaseUrl`; stored nowhere else. */
   readonly publicBaseUrl: string;
   readonly image: ImagePolicy;
-  /** Legal but suspicious settings, logged once at startup. */
   readonly warnings: readonly string[];
 }
 
@@ -114,23 +86,6 @@ export class ConfigError extends Error {
   }
 }
 
-/**
- * Parses the environment. Collects every issue before throwing so an operator fixes their `.env`
- * in one pass. An empty string counts as unset, so `FOO=` in an env file means "use the default".
- *
- * Cross-field rules:
- * - ALLOWED_DOMAINS and ALLOWED_EMAILS both empty -> error (fail closed, loudly).
- * - STORAGE_DRIVER=gcs requires GCS_BUCKET; GCS_PUBLIC_BUCKET must differ from GCS_BUCKET
- *   (records must never sit in a public-read bucket).
- * - STORAGE_DRIVER=local while `K_SERVICE` is set (Cloud Run) -> error: the container disk is
- *   ephemeral and every image would vanish on the next instance.
- * - `K_SERVICE` set and MAX_UPLOAD_MB > 31 -> error (Cloud Run rejects larger requests).
- * - APP_URL with a path, query, or fragment -> error.
- * - Drive enabled and no project number (neither GOOGLE_PROJECT_NUMBER nor derivable from
- *   GOOGLE_CLIENT_ID) -> error.
- * - APP_URL http:// on a host other than localhost -> warning (cookies lose `Secure`).
- * - An ADMIN_EMAILS entry the allow-list would reject -> warning (that admin cannot sign in).
- */
 export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>): Config {
   const issues: string[] = [];
   const warnings: string[] = [];
@@ -166,7 +121,6 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
 
   const onCloudRun = (rawEnv["K_SERVICE"] ?? "") !== "";
 
-  // Core
   const appUrl = parseAppUrl(required("APP_URL"), issues);
   if (appUrl !== null && appUrl.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]"].includes(appUrl.hostname)) {
     warnings.push(`APP_URL ${appUrl.origin} is not https: session cookies are sent without the Secure flag.`);
@@ -177,7 +131,6 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
   if (localeRaw !== "auto" && pinnedLocale === null) issues.push(`APP_LOCALE must be auto, ja or en (got "${localeRaw}").`);
   const port = int("PORT", 1, 65535);
 
-  // Auth
   const secret = required("AUTH_SECRET");
   if (secret !== "" && secret.length < 32) issues.push("AUTH_SECRET must be at least 32 characters (`openssl rand -base64 32`).");
   const clientId = required("GOOGLE_CLIENT_ID");
@@ -198,7 +151,6 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
   }
   const sessionTtlSeconds = int("SESSION_TTL_HOURS", 1, 720) * 3600;
 
-  // Google Drive import
   const pickerKey = env("GOOGLE_PICKER_API_KEY");
   const projectOverride = env("GOOGLE_PROJECT_NUMBER");
   if (projectOverride !== "" && !/^\d+$/u.test(projectOverride)) {
@@ -211,7 +163,6 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
     else drive = { clientId, apiKey: pickerKey, appId };
   }
 
-  // Storage
   const driver = env("STORAGE_DRIVER");
   let storage: StorageConfig = { driver: "local", dataDir: env("DATA_DIR") };
   if (driver === "gcs") {
@@ -235,7 +186,6 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
     issues.push(`IMAGE_BASE_URL must be an absolute http(s) URL without query or fragment (got "${override}").`);
   }
 
-  // Image policy
   const maxDimension = int("IMAGE_MAX_DIMENSION", 16, 8192);
   const quality = int("WEBP_QUALITY", 1, 100);
   const maxUploadMb = int("MAX_UPLOAD_MB", 1, 100);
@@ -299,10 +249,6 @@ function parseBaseUrl(raw: string): string | null {
   }
 }
 
-/**
- * IMAGE_BASE_URL if set; else `https://storage.googleapis.com/<publicBucket>/i` when a public bucket
- * is configured; else `<APP_URL>/i` (served by the app from whichever store holds the bytes).
- */
 export function derivePublicBaseUrl(input: {
   readonly appUrl: URL;
   readonly storage: StorageConfig;
@@ -325,7 +271,6 @@ export function projectNumberFromClientId(clientId: string): string | null {
   return /^(\d+)-[\w-]+\.apps\.googleusercontent\.com$/u.exec(clientId)?.[1] ?? null;
 }
 
-/** `" Example.com, @sub.example.com ,"` -> `{"example.com","sub.example.com"}`; rejects `*` and whitespace inside. */
 export function parseDomainList(raw: string): { readonly domains: ReadonlySet<string>; readonly invalid: readonly string[] } {
   const domains = new Set<string>();
   const invalid: string[] = [];

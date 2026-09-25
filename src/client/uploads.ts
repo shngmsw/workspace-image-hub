@@ -1,27 +1,11 @@
-/**
- * The one ingestion path in the browser. Drag & drop, the file dialog, clipboard paste, and Google
- * Drive all become `IntakeFile`s and go through `queue.enqueue`; the server sees the same request
- * for all of them, and the user sees the same progress row, error, and retry button.
- *
- *   queued -> fetching -> uploading(progress) -> converting -> done(asset)
- *                    \______________\_______________\______-> failed(code) -> retry -> queued
- */
-
 import type { ClientErrorCode, ErrorCode, UploadMeta } from "../shared/api";
 import type { AssetSource, AssetView, InputIssue } from "../shared/domain";
 import { ApiError, uploadAsset } from "./api";
 
-/**
- * A file the user chose, before any bytes move. `open` produces the bytes when the queue gets to
- * it, so a Drive download happens inside an upload slot, shows in the same row, and a retry
- * re-downloads instead of reusing a failed or stale Blob.
- */
 export interface IntakeFile {
   readonly name: string;
-  /** Known up front: `File.size`, or the Picker's `sizeBytes`. Lets the queue refuse early. */
   readonly size: number;
   readonly source: AssetSource;
-  /** Local: resolves to the File itself. Drive: fetches `alt=media`; rejects with DriveDownloadError. */
   readonly open: (signal: AbortSignal) => Promise<Blob>;
 }
 
@@ -34,7 +18,6 @@ export function fromLocalFiles(files: Iterable<File>): IntakeFile[] {
   }));
 }
 
-/** Thrown by a Drive IntakeFile's `open()`; the queue shows it as `drive_download`. */
 export class DriveDownloadError extends Error {
   constructor(readonly status: number | "network") {
     super(`drive download failed: ${String(status)}`);
@@ -53,20 +36,15 @@ export type UploadStatus =
   | { readonly state: "failed"; readonly code: ErrorCode | ClientErrorCode; readonly issue?: InputIssue };
 
 export interface UploadItem {
-  /** Client-local key for React lists; never sent to the server. */
   readonly key: string;
   readonly file: IntakeFile;
-  /** Batch tags captured at enqueue time, so editing the tag box later does not rewrite queued items. */
   readonly tags: readonly string[];
   readonly status: UploadStatus;
 }
 
 export interface UploadQueue {
-  /** `tags` = the batch tag box at the moment of the drop / pick. */
   enqueue(files: readonly IntakeFile[], tags: readonly string[]): void;
-  /** Only for `failed` items. Calls `open` again. */
   retry(key: string): void;
-  /** Aborts an in-flight item (download or XHR) or drops a queued one; dismisses a finished one. */
   cancel(key: string): void;
   clearFinished(): void;
 }
@@ -81,20 +59,12 @@ export type Uploader = (
 export interface UploadQueueOptions {
   readonly maxBytes: number;
   readonly onChange: (items: readonly UploadItem[]) => void;
-  /** Called once per success so the grid prepends the new asset without refetching. */
   readonly onUploaded: (asset: AssetView) => void;
-  /** Injected for tests; defaults to the XHR uploader. */
   readonly upload?: Uploader;
 }
 
-/** Uploads in flight per tab. Matches the server's TRANSCODE_CONCURRENCY; more only queues there. */
 export const UPLOAD_CONCURRENCY = 2;
 
-/**
- * `size > maxBytes` fails immediately as `too_large` (the server's code, so one message), without a
- * request. Everything else is sent as-is: format sniffing and pixel limits are the server's job, and
- * a second, looser copy of them here would drift.
- */
 export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
   const upload = options.upload ?? uploadAsset;
   const controllers = new Map<string, AbortController>();
@@ -164,7 +134,6 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
           status: file.size > options.maxBytes ? { state: "failed", code: "too_large" } : { state: "queued" },
         }),
       );
-      // Newest first, like the library below it.
       items = [...added.reverse(), ...items];
       emit();
       pump();

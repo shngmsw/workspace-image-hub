@@ -44,15 +44,12 @@ import {
 } from "./store";
 
 export interface GcsStoreOptions {
-  /** Private bucket: records always; images too when `publicBucket` is null. */
   readonly bucket: string;
   readonly publicBucket: string | null;
   readonly log: Logger;
-  /** Injected for tests; defaults to Application Default Credentials. */
   readonly storage?: Storage;
 }
 
-/** Record metadata key. */
 export const RECORD_METADATA_KEY = "wih-record";
 
 /**
@@ -205,7 +202,6 @@ function statusOf(error: unknown): number | undefined {
   return error instanceof Error && "code" in error && typeof error.code === "number" ? error.code : undefined;
 }
 
-/** SDK and network errors never leave the driver; contract errors pass through unchanged. */
 async function guard<T>(work: () => Promise<T>): Promise<T> {
   try {
     return await work();

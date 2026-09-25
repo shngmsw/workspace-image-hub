@@ -1,9 +1,3 @@
-/**
- * Guards the invariant in domain.ts `AssetRecord`: the largest record the domain parsers can
- * produce still fits GCS custom metadata (8 KiB for all keys + values of one object). Raising a
- * *_MAX_CHARS limit without re-checking this fails CI instead of failing uploads in production.
- */
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,13 +19,8 @@ import { encodeRecord } from "./store";
 
 const GCS_CUSTOM_METADATA_LIMIT = 8 * 1024;
 
-/**
- * Characters that are expensive in JSON, one per way of being expensive. If a parser forgets
- * `cleanText`, the control-char or lone-surrogate case blows the budget and this test says so.
- */
-const HOSTILE_CHARS = ["𠮷" /* 4-byte UTF-8 */, "\u0001" /* 6-byte escape */, "\ud800" /* lone surrogate */, '"', "\\"];
+const HOSTILE_CHARS = ["𠮷", "\u0001", "\ud800", '"', "\\"];
 
-/** Built through the real parsers, not by hand, so the test follows the limits wherever they move. */
 function worstCaseRecord(char: string): AssetRecord {
   const tags = parseTags(
     Array.from({ length: TAGS_MAX }, (_, i) => {

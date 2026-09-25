@@ -1,8 +1,3 @@
-/**
- * Loading Google's browser scripts, and the Sign in with Google button. Both scripts come from
- * origins the server's CSP lists (app.ts `contentSecurityPolicy`).
- */
-
 import type { GoogleSignInBoot } from "../shared/api";
 import type { Locale } from "../shared/i18n";
 
@@ -11,7 +6,6 @@ export const GAPI_SCRIPT = "https://apis.google.com/js/api.js";
 
 const loading = new Map<string, Promise<void>>();
 
-/** Adds the script once; later calls share the same promise. A failed load can be retried. */
 export function loadScript(src: string): Promise<void> {
   const existing = loading.get(src);
   if (existing !== undefined) return existing;

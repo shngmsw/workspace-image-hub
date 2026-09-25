@@ -4,13 +4,11 @@ import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-// `*.testing` modules mint values (such as an Actor) that production code must only get from auth.ts.
 const testingBan = {
   group: ["**/*.testing", "**/*.testing.ts"],
   message: "Test-only module. Allowed in *.test.ts, test/ and src/server/dev.ts only.",
 };
 
-// Anything read here is inlined at build time and baked into the one image every organisation shares.
 const envBans = [
   {
     selector: "MemberExpression[object.name='process'][property.name='env']",
@@ -64,7 +62,6 @@ export default defineConfig(
             testingBan,
             {
               group: ["**/server/**", "../server/*"],
-              // Types are erased, so they cannot pull server code into the browser bundle.
               allowTypeImports: true,
               message: "The browser bundle must not import server modules (type-only imports are fine).",
             },

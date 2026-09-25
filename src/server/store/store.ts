@@ -1,37 +1,3 @@
-/**
- * The storage port. One store holds two kinds of object per asset:
- *
- *   image   `i/<id>.webp`   public bytes, written once, served with IMAGE_CACHE_CONTROL
- *   record  `r/<id>`        private AssetRecord
- *
- * Layout per driver:
- *
- *   local                 DATA_DIR/i/<id>.webp          DATA_DIR/r/<id>.json
- *   gcs                   gs://GCS_BUCKET/i/<id>.webp   gs://GCS_BUCKET/r/<id>
- *   gcs + public bucket   gs://GCS_PUBLIC_BUCKET/i/...  gs://GCS_BUCKET/r/<id>
- *
- * The image key is also the URL path, so one layout can be served by the app, by nginx, or by GCS
- * directly, and `derivePublicBaseUrl` only ever appends `/i`.
- *
- * One record per asset, not one index for all: each upload writes only its own keys, so concurrent
- * uploads from several Cloud Run instances never contend. The "index" is `listRecords()`, merged and
- * sorted at read time.
- *
- * Contract (contract.test.ts runs one suite against every driver):
- * - `putImage` / `createRecord` are create-only. An existing key -> `StoreConflict`, existing object
- *   untouched. Immutability of public bytes is a storage guarantee, not a probability argument.
- * - Writes are atomic: readers see the whole object or nothing. A half-written WebP must never be
- *   served under `immutable`.
- * - `deleteImage` / `deleteRecord` are idempotent: a missing key resolves.
- * - `updateRecord` is compare-and-swap and never resurrects: if the record vanished before commit it
- *   throws `RecordNotFound`, so a tag edit racing a delete cannot bring back a record whose image
- *   is gone.
- * - `listRecords` reflects every completed write and skips (and logs) undecodable records rather
- *   than failing the whole list.
- * - Transport failures surface as `HubError("storage_unavailable")`; SDK error types never leave the
- *   driver.
- */
-
 import {
   type AssetId,
   type AssetRecord,
@@ -45,18 +11,14 @@ import {
 } from "../../shared/domain";
 
 export interface AssetStore {
-  /** Create-only, atomic. Sets Content-Type image/webp and IMAGE_CACHE_CONTROL where the backend stores them. */
   putImage(id: AssetId, webp: Uint8Array): Promise<void>;
-  /** For the `/i/` route. null when absent. */
   openImage(id: AssetId): Promise<StoredImage | null>;
   deleteImage(id: AssetId): Promise<void>;
 
   createRecord(record: AssetRecord): Promise<void>;
   getRecord(id: AssetId): Promise<AssetRecord | null>;
-  /** Read-modify-write with CAS; retries internally on a lost race (max 3), then `storage_unavailable`. */
   updateRecord(id: AssetId, mutate: (current: AssetRecord) => AssetRecord): Promise<AssetRecord>;
   deleteRecord(id: AssetId): Promise<void>;
-  /** Every decodable record, unordered. */
   listRecords(): Promise<AssetRecord[]>;
 }
 
@@ -86,7 +48,6 @@ export class RecordNotFound extends Error {
 
 export const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
-/** Attempts a driver makes at a compare-and-swap before giving up with `storage_unavailable`. */
 export const CAS_ATTEMPTS = 3;
 
 export function imageKey(id: AssetId): string {
@@ -97,9 +58,6 @@ export function recordKey(id: AssetId): string {
   return `r/${id}`;
 }
 
-// ── Record codec: the persisted schema, spelled once. Drivers only move the string. ──────────
-
-/** Canonical JSON of an AssetRecord (`v` first, fixed key order). */
 export function encodeRecord(record: AssetRecord): string {
   const canonical: AssetRecord = {
     v: 1,
@@ -119,11 +77,6 @@ export function encodeRecord(record: AssetRecord): string {
   return JSON.stringify(canonical);
 }
 
-/**
- * Stored data is a boundary too (files can be hand-edited, restored from old backups, or written by
- * a future version). Validates `v === 1` and every field through the domain parsers; returns null
- * instead of throwing so one bad record cannot blank the dashboard.
- */
 export function decodeRecord(raw: string): AssetRecord | null {
   let json: unknown;
   try {

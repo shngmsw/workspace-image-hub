@@ -1,10 +1,3 @@
-/**
- * `pnpm gen:env-docs` writes `.env.example`, and the env tables between `<!-- env:start -->` and
- * `<!-- env:end -->` in README.md / README.ja.md when those files carry the markers, all from
- * `ENV_VARS`. `--check` writes nothing and fails on any difference, so CI keeps the docs honest.
- * `ENV_DOCS_JA` is keyed by EnvName, so a variable without a Japanese description is a compile error.
- */
-
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -88,7 +81,6 @@ export function renderEnvTable(locale: "en" | "ja"): string {
 const START = "<!-- env:start -->";
 const END = "<!-- env:end -->";
 
-/** Every generated file with its expected content; README files only when they carry the markers. */
 export function expectedFiles(read: (path: string) => string | null): { path: string; content: string }[] {
   const files = [{ path: ".env.example", content: renderEnvExample() }];
   for (const [path, locale] of [["README.md", "en"], ["README.ja.md", "ja"]] as const) {

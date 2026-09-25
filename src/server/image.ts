@@ -1,17 +1,3 @@
-/**
- * Everything this app knows about pixels: which inputs it accepts, how it guards memory, and the one
- * encoding policy (long-edge cap, quality, animated GIF -> animated WebP). The hub calls a single
- * function; sharp does not appear anywhere else.
- *
- * Invariants of the output:
- * - Always WebP produced by our encoder. User bytes are never stored or served as-is, which rules
- *   out polyglot files and content-type confusion on the public path.
- * - Metadata stripped (sharp's default; we never call keepMetadata/withMetadata): EXIF GPS from phone
- *   photos never becomes public. Colour is converted to sRGB before the profile is dropped.
- * - Long edge <= maxDimension; never upscaled.
- * - Animated GIF/WebP input stays animated, frame delays and loop count preserved.
- */
-
 import sharp, { type Metadata } from "sharp";
 
 import { HubError } from "./errors";
@@ -28,42 +14,24 @@ export type InputFormat = "jpeg" | "png" | "webp" | "gif" | "avif" | "tiff";
  */
 export const ACCEPTED_FORMATS: readonly InputFormat[] = ["jpeg", "png", "webp", "gif", "avif", "tiff"];
 
-/** For `<input accept>` and the Drive Picker mime filter. Advisory; the sniff above decides. */
 export const ACCEPTED_MIME_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/avif,image/tiff";
 
-/**
- * Transcodes allowed at once per process; later calls wait. With the default pixel cap this bounds
- * peak decode memory near 0.8 GB, which is why the Cloud Run quickstart asks for 2 GiB.
- */
 export const TRANSCODE_CONCURRENCY = 2;
 
 export interface TranscodePolicy {
-  /** Long-edge cap in px. */
   readonly maxDimension: number;
-  /** WebP quality 1..100. */
   readonly quality: number;
-  /**
-   * Decoded pixels allowed per upload, all frames counted. A 20 MB file can declare 50000x50000
-   * pixels; this cap turns such a pixel bomb into `too_many_pixels` before decoding.
-   */
   readonly maxInputPixels: number;
 }
 
 export interface Transcoded {
   readonly webp: Uint8Array;
   readonly width: number;
-  /** Per frame. */
   readonly height: number;
   readonly frames: number;
   readonly inputFormat: InputFormat;
 }
 
-/**
- * Throws HubError with:
- * - `unsupported_format` for a recognised but rejected format, or bytes that are not an image;
- * - `too_many_pixels` when width x frameHeight x frames > maxInputPixels;
- * - `corrupt_image` when decoding fails part-way (truncated file).
- */
 export type Transcoder = (input: Uint8Array) => Promise<Transcoded>;
 
 export function createTranscoder(policy: TranscodePolicy): Transcoder {

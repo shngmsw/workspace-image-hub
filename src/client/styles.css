@@ -1,10 +1,5 @@
 @import "tailwindcss";
 
-/*
- * A darkroom contact sheet: warm paper and ink by day, a charcoal darkroom by night, and one
- * safelight accent. Colours are tokens so both schemes share every class.
- */
-
 @theme {
   --font-sans: "Instrument Sans Variable", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
   --font-display: "Instrument Serif", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
@@ -61,7 +56,6 @@
     --danger: #ff8b80;
     --danger-soft: #3a1714;
     --ok: #86c9a3;
-    /* Still a lit table: most uploads are logos and avatars drawn for light backgrounds. */
     --table: #c9c3b7;
     --checker: #b8b1a3;
     --grain-opacity: 0.05;
@@ -81,7 +75,6 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  /* Film grain over everything, so flat colour reads as paper rather than a screen. */
   body::after {
     content: "";
     position: fixed;
@@ -102,13 +95,11 @@
 }
 
 @layer components {
-  /* Transparent pixels show as a light-table checkerboard. */
   .checker {
     background-color: var(--table);
     background-image: repeating-conic-gradient(var(--checker) 0 25%, transparent 0 50%);
     background-size: 18px 18px;
   }
-  /* Crop marks in a sheet's corners. */
   .crop-marks {
     --mark: var(--accent);
     background:
@@ -124,7 +115,6 @@
   .develop {
     animation: develop 0.6s var(--ease-develop) both;
   }
-  /* The server is converting: the bar keeps a slow safelight sweep. */
   .converting {
     background-image: linear-gradient(90deg, transparent 0%, var(--accent) 40%, var(--accent) 60%, transparent 100%);
     background-size: 50% 100%;

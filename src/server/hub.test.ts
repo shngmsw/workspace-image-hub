@@ -1,8 +1,3 @@
-/**
- * Hub behaviour through its public surface, against the in-memory store and real sharp. This file
- * doubles as the canonical example of calling the core without HTTP.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { animatedGif, photoPng, solidPng } from "../../test/fixtures";

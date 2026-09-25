@@ -1,35 +1,14 @@
-/**
- * Google Drive as a file source, entirely in the browser.
- *
- *   click "Import from Google Drive"                    (a user gesture: GIS may open a popup)
- *     -> GIS token client: scope drive.file, login_hint = signed-in email
- *     -> Picker (image docs + shared drives, multiselect, mime filter = boot.upload.accept)
- *     -> one IntakeFile per picked doc; its `open()` is
- *        GET https://www.googleapis.com/drive/v3/files/{id}?alt=media&supportsAllDrives=true
- *        with `Authorization: Bearer <token>` -> Blob
- *     -> uploads.enqueue(files, batchTags)                (the queue downloads inside an upload slot)
- *
- * The access token lives in this module's memory for its ~1 h lifetime and is never sent to our
- * server, so the server has no Drive client, no Google user credential to protect, and a single
- * ingestion path. Cost: picked bytes cross the user's network twice, bounded by MAX_UPLOAD_MB.
- *
- * Import is a one-time copy: a later edit in Drive does not change the published WebP.
- */
-
 import type { DriveBootConfig } from "../shared/api";
 import type { Locale } from "../shared/i18n";
 import { GAPI_SCRIPT, GIS_SCRIPT, loadScript } from "./google";
 import { DriveDownloadError, type IntakeFile } from "./uploads";
 
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-/** Refresh a token that has less than this left, rather than failing a download halfway. */
 const TOKEN_MARGIN_MS = 5 * 60 * 1000;
 
 export interface PickOptions {
-  /** Signed-in email, so GIS preselects the same account instead of showing a chooser. */
   readonly loginHint: string;
   readonly locale: Locale;
-  /** `boot.upload.accept` (the server's ACCEPTED_MIME_TYPES), reused as the Picker mime filter. */
   readonly accept: string;
 }
 

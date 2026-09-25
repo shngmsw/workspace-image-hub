@@ -1,11 +1,3 @@
-/**
- * In-memory store. Used by hub tests and as the reference driver: it passes the same contract
- * suite as local and gcs (contract.test.ts), so a hub test that passes here exercises the protocol
- * the real drivers promise, not a mock's looser behaviour.
- *
- * Not selectable by STORAGE_DRIVER: data that vanishes on restart is never what an operator wants.
- */
-
 import type { AssetId } from "../../shared/domain";
 import { HubError } from "../errors";
 import type { Logger } from "../log";
@@ -23,19 +15,13 @@ import {
 export type MemoryWriteOp = "putImage" | "createRecord" | "updateRecord" | "deleteImage" | "deleteRecord";
 
 export interface MemoryStoreOptions {
-  /**
-   * Test hook: called before each write commits, so a test can inject a concurrent write or a
-   * failure between the hub's steps (e.g. crash after putImage, before createRecord).
-   */
   readonly beforeCommit?: (op: MemoryWriteOp, key: string) => Promise<void>;
-  /** Backing map of encoded records by id. Tests pass their own to plant undecodable records. */
   readonly records?: Map<string, string>;
   readonly log?: Logger;
 }
 
 export function createMemoryStore(options: MemoryStoreOptions = {}): AssetStore {
   const images = new Map<AssetId, Uint8Array>();
-  // Stored encoded and decoded on read, so every hub test exercises the codec round-trip.
   const records = options.records ?? new Map<string, string>();
   const beforeCommit = options.beforeCommit ?? (() => Promise.resolve());
 

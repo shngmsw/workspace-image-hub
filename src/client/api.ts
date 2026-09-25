@@ -1,11 +1,3 @@
-/**
- * Browser side of shared/api.ts. Every call returns domain types or throws `ApiError` carrying an
- * ErrorCode; components never parse HTTP.
- *
- * A 401 from any call means the session ended: the page reloads, and the server renders the
- * sign-in screen (keeping `?q=&tag=`, which the reload preserves).
- */
-
 import {
   type AuthErrorCode,
   type ErrorBody,
@@ -62,11 +54,6 @@ export async function listAssets(): Promise<ListAssetsResponse["assets"]> {
   return ((await res.json()) as ListAssetsResponse).assets;
 }
 
-/**
- * XMLHttpRequest, not fetch, because upload progress events are the point of the progress bar.
- * `onProgress(total, total)` fires when the last byte has left the browser: from then on the
- * server is converting. Network failure rejects with TypeError; an HTTP error with ApiError.
- */
 export function uploadAsset(
   file: Blob,
   meta: UploadMeta,
@@ -106,12 +93,10 @@ export async function updateAsset(id: AssetId, body: UpdateAssetBody): Promise<A
   return (await res.json()) as AssetView;
 }
 
-/** Resolves on 204. Deleting an already-deleted asset also resolves (the server is idempotent). */
 export async function deleteAsset(id: AssetId): Promise<void> {
   await call(ROUTES.deleteAsset.path.replace(":id", id), { method: "DELETE" });
 }
 
-/** Posts the Google ID token. null on success (the session cookie is set), else the refusal. */
 export async function signIn(credential: string): Promise<AuthErrorCode | null> {
   const res = await fetch(ROUTES.signIn.path, { method: "POST", credentials: "same-origin", ...json({ credential } satisfies SignInRequest) });
   if (res.ok) return null;

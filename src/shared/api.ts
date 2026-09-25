@@ -1,27 +1,8 @@
-/**
- * The HTTP contract between the browser bundle and the server: routes, request encodings, error
- * codes, and the boot payload. Both sides import this file, so the wire format is spelled once.
- *
- * Responses reuse `AssetView` from domain.ts: it is already JSON-safe, and a structurally
- * identical DTO would be a pass-through type.
- */
-
 import type { DomainErrorCode } from "../server/errors";
 import type { AssetPatch, AssetSource, AssetView, Email, FileName, Parsed, Tag } from "./domain";
 import { parseFileName, parseSource, parseTags } from "./domain";
 import type { Locale } from "./i18n";
 
-// ── Routes ──────────────────────────────────────────────────────────────────────────────────
-
-/**
- * Every route the server answers. `auth` says who may call it.
- * - public: anyone, no cookie needed.
- * - member: valid session whose identity still passes the *current* allow-list.
- * Every non-GET route additionally requires `Origin` === APP_URL origin (CSRF), checked once in
- * app.ts middleware, so no handler can forget it.
- *
- * There is deliberately no token-authenticated API: the SPA is the only client.
- */
 export const ROUTES = {
   shell: { method: "GET", path: "/", auth: "public", note: "SPA shell + BootConfig; sign-in screen when no session" },
   static: { method: "GET", path: "/static/*", auth: "public", note: "content-hashed build assets, immutable" },
@@ -35,27 +16,16 @@ export const ROUTES = {
   deleteAsset: { method: "DELETE", path: "/api/assets/:id", auth: "member", note: "204; idempotent" },
 } as const;
 
-// ── Errors ──────────────────────────────────────────────────────────────────────────────────
-
-/**
- * Codes only the HTTP shell produces (auth, CSRF, request parsing, body cap, unexpected throw).
- * The core throws `DomainErrorCode`s (server/errors.ts) and can never raise one of these.
- */
 export type TransportErrorCode = "unauthenticated" | "cross_origin" | "invalid_input" | "too_large" | "internal";
 
-/** Stable codes on the wire. The server never sends user-facing prose; the client maps codes via i18n. */
 export type ErrorCode = DomainErrorCode | TransportErrorCode;
 
 export interface ErrorBody {
   readonly error: { readonly code: ErrorCode; readonly detail?: Readonly<Record<string, string | number>> };
 }
 
-/** Failures the browser detects without a server answer. Translated alongside ErrorCode. */
 export type ClientErrorCode = "network" | "drive_download";
 
-// ── Sign-in ─────────────────────────────────────────────────────────────────────────────────
-
-/** Reasons `POST /auth/google` refused to create a session; shown on the sign-in screen. */
 export type AuthErrorCode = "not_allowed" | "email_unverified" | "login_failed";
 
 const AUTH_ERROR_CODES: readonly AuthErrorCode[] = ["not_allowed", "email_unverified", "login_failed"];
@@ -64,12 +34,10 @@ export function parseAuthErrorCode(raw: string | null | undefined): AuthErrorCod
   return AUTH_ERROR_CODES.find((code) => code === raw) ?? null;
 }
 
-/** Body of `POST /auth/google`: the ID token Google Identity Services handed to the page. */
 export interface SignInRequest {
   readonly credential: string;
 }
 
-/** Body of a refused `POST /auth/google` (401 or 403). Success is 204 with the session cookie. */
 export interface SignInFailure {
   readonly authError: AuthErrorCode;
 }
@@ -82,8 +50,6 @@ export function parseSignInRequest(json: unknown): string | null {
     ? credential
     : null;
 }
-
-// ── Assets ──────────────────────────────────────────────────────────────────────────────────
 
 export interface ListAssetsResponse {
   readonly assets: readonly AssetView[];
@@ -109,7 +75,6 @@ export interface ParsedUploadMeta {
   readonly tags: readonly Tag[];
 }
 
-/** The client sends the name already cleaned and truncated, which keeps the header small. */
 export function encodeUploadMeta(meta: UploadMeta): string {
   const json: UploadMeta = { filename: parseFileName(meta.filename), source: meta.source, tags: meta.tags };
   return toBase64Url(new TextEncoder().encode(JSON.stringify(json)));
@@ -140,7 +105,6 @@ export interface UpdateAssetBody {
   readonly tags: readonly string[];
 }
 
-/** `unknown` in, domain patch out. Rejects unknown keys and a missing `tags`. */
 export function parseUpdateAssetBody(json: unknown): Parsed<AssetPatch> {
   if (!isPlainObject(json) || !hasOnlyKeys(json, ["tags"]) || !isStringArray(json["tags"])) {
     return { ok: false, issue: "body_malformed" };
@@ -148,8 +112,6 @@ export function parseUpdateAssetBody(json: unknown): Parsed<AssetPatch> {
   const tags = parseTags(json["tags"]);
   return tags.ok ? { ok: true, value: { tags: tags.value } } : tags;
 }
-
-// ── Boot payload ────────────────────────────────────────────────────────────────────────────
 
 export const BOOT_ELEMENT_ID = "wih-boot";
 
@@ -164,24 +126,20 @@ export const BOOT_ELEMENT_ID = "wih-boot";
 export interface BootConfig {
   readonly appName: string;
   readonly locale: Locale;
-  /** true when APP_LOCALE pins the language; the UI hides the language toggle. */
   readonly localeFixed: boolean;
   readonly session: SignedInBoot | SignedOutBoot;
   readonly upload: {
     readonly maxBytes: number;
     readonly maxDimension: number;
     readonly quality: number;
-    /** Value for `<input accept>`; the server still sniffs the real format. */
     readonly accept: string;
   };
-  /** null when GOOGLE_PICKER_API_KEY is unset: the Drive button is not rendered at all. */
   readonly drive: DriveBootConfig | null;
 }
 
 export interface SignedInBoot {
   readonly state: "signed-in";
   readonly user: BootUser;
-  /** The catalog, saving the first round trip. null when storage failed; the client then fetches. */
   readonly assets: readonly AssetView[] | null;
 }
 
@@ -191,14 +149,10 @@ export interface SignedOutBoot {
   readonly signIn: GoogleSignInBoot;
 }
 
-/** What the Google Identity Services button needs. */
 export interface GoogleSignInBoot {
   readonly clientId: string;
-  /** Also set as an HttpOnly cookie; the server accepts only an ID token carrying this nonce. */
   readonly nonce: string;
-  /** GIS `hd` hint: set only when exactly one domain and no individual emails are allowed. */
   readonly hostedDomain: string | null;
-  /** Shown as a hint on the sign-in screen. Individual allowed emails are never disclosed. */
   readonly allowedDomains: readonly string[];
 }
 
@@ -212,11 +166,8 @@ export interface BootUser {
 export interface DriveBootConfig {
   readonly clientId: string;
   readonly apiKey: string;
-  /** Cloud project number: GOOGLE_PROJECT_NUMBER, or derived from the OAuth client id prefix. */
   readonly appId: string;
 }
-
-// ── Helpers ─────────────────────────────────────────────────────────────────────────────────
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -1,12 +1,3 @@
-/**
- * Reads the server-rendered BootConfig. Trusted: same-origin HTML the server just produced, so no
- * schema validation here (validation lives where untrusted data enters: the server).
- *
- * This is the browser's only source of configuration. ESLint bans `import.meta.env` and
- * `process.env` under src/client, because either would be inlined at build time and baked into the
- * one image every organisation shares.
- */
-
 import { BOOT_ELEMENT_ID, type BootConfig } from "../shared/api";
 
 export function readBoot(doc: Document = document): BootConfig {

@@ -1,6 +1,4 @@
 # syntax=docker/dockerfile:1
-# One image for every organisation: nothing org-specific is baked in; all configuration is runtime
-# env (see .env.example). Published multi-arch to ghcr.io by .github/workflows/docker.yml.
 
 FROM node:24-slim AS base
 ENV PNPM_HOME=/pnpm COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -13,7 +11,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
-# Production dependencies only; sharp's native binary comes from its per-platform package.
 FROM base AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --store-dir /pnpm/store
 

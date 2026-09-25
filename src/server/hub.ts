@@ -1,20 +1,3 @@
-/**
- * The core. Four operations on the asset library, each taking the Actor that asked:
- *
- *   ingest  bytes -> WebP -> stored image + record -> AssetView
- *   list    every record -> AssetView[] (newest first)
- *   update  tags
- *   remove  image, then record
- *
- * Hidden behind these four: format sniffing and pixel limits (via the Transcoder), id generation
- * and collision retry, the commit order that keeps storage consistent across crashes, the delete
- * policy, record CAS (via the store), and public URL derivation. Inputs arrive already parsed into
- * domain types, so the hub never re-validates.
- *
- * Framework-free and I/O-free except through `AssetStore` and `Transcoder`, so tests run it against
- * an in-memory store and real sharp.
- */
-
 import {
   type AssetId,
   type AssetPatch,
@@ -35,9 +18,7 @@ import type { Transcoder } from "./image";
 import type { Logger } from "./log";
 import { type AssetStore, RecordNotFound, StoreConflict } from "./store/store";
 
-/** Structurally `ParsedUploadMeta & { bytes }`, so the route spreads the parsed header straight in. */
 export interface IngestInput {
-  /** Already capped at MAX_UPLOAD_MB by the HTTP boundary (app.ts reads the body with a limit). */
   readonly bytes: Uint8Array;
   readonly originalName: FileName;
   readonly source: AssetSource;
@@ -45,52 +26,20 @@ export interface IngestInput {
 }
 
 export interface Hub {
-  /**
-   * Commit protocol (the record is the commit point):
-   *   1. transcode                    (nothing written yet; bad input costs no storage)
-   *   2. id = newAssetId()
-   *   3. store.putImage(id, webp)     create-only; StoreConflict -> new id, retry (max 3)
-   *   4. store.createRecord(record)   create-only
-   *   5. return toView(record)
-   * Crash after 3: an orphan image nobody knows the URL of (the response was never sent), and no
-   * record, so it is not listed. A retried request makes a second asset: no dedup, because two
-   * people may legitimately upload the same logo with different tags.
-   */
   ingest(actor: Actor, input: IngestInput): Promise<AssetView>;
 
-  /** Every asset, `createdAt` desc then id. The client filters (shared/query.ts). */
   list(actor: Actor): Promise<AssetView[]>;
 
-  /**
-   * Any member may edit. A missing record -> HubError("not_found").
-   * Concurrent edits of one asset: CAS in the store prevents torn writes; with replace semantics
-   * the last writer's tag list wins.
-   */
   update(actor: Actor, id: AssetId, patch: AssetPatch): Promise<AssetView>;
 
-  /**
-   * Order (the public effect first):
-   *   1. record = store.getRecord(id)        null -> resolve (already deleted: idempotent)
-   *   2. canDelete(actor, record) or HubError("forbidden")
-   *   3. store.deleteImage(id)               the origin stops serving it
-   *   4. store.deleteRecord(id)
-   * Crash after 3: record still listed, image gone; pressing delete again finishes the job. The
-   * opposite order could leave a public image with no record, i.e. a link nobody can find to delete.
-   *
-   * Delete cannot reach copies already cached under IMAGE_CACHE_CONTROL (one year, immutable) by
-   * browsers, Chat/GitHub/Notion image proxies, a CDN, or Google's edge cache for public buckets.
-   * The confirm dialog says so. Delete means "unlisted and gone at origin", not "recalled".
-   */
   remove(actor: Actor, id: AssetId): Promise<void>;
 }
 
 export interface HubDeps {
   readonly store: AssetStore;
   readonly transcode: Transcoder;
-  /** From config.publicBaseUrl. */
   readonly publicBaseUrl: string;
   readonly log: Logger;
-  /** Injected for tests. */
   readonly now?: () => Date;
   readonly newId?: () => AssetId;
 }

@@ -1,12 +1,4 @@
 #!/usr/bin/env sh
-# End-to-end smoke test over HTTP with curl, against a running dev server:
-#
-#   DEV_FAKE_LOGIN=alice@example.com pnpm dev      # then, in another shell:
-#   sh scripts/smoke.sh                            # BASE=http://localhost:5173 by default
-#
-# Uploads a generated 3000x2000 PNG, checks the WebP link, lists, edits tags, and checks the
-# delete policy (another member is refused; the owner deletes; a second delete is still 204).
-# KEEP=1 skips the owner's delete, so the image can be checked against another server afterwards.
 set -eu
 
 BASE=${BASE:-http://localhost:5173}

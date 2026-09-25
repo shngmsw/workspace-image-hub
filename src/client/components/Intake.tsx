@@ -12,10 +12,6 @@ function imagesOf(list: FileList | null | undefined): File[] {
   return Array.from(list ?? []).filter((f) => f.type === "" || f.type.startsWith("image/"));
 }
 
-/**
- * Every way an image enters: drop anywhere on the page, the file dialog, paste, and Drive. All of
- * them become IntakeFiles with the batch tags captured at that moment.
- */
 export function Intake({
   boot,
   user,
@@ -44,7 +40,6 @@ export function Intake({
     setTagError(null);
     onFiles(files, tags);
   };
-  // The window listeners below see the current tag box without re-subscribing on every keystroke.
   const submitFromWindow = useEffectEvent(submit);
 
   useEffect(() => {

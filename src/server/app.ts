@@ -1,10 +1,3 @@
-/**
- * The HTTP shell (Hono). Thin: each route authenticates, parses its input into domain types, calls one
- * Hub or Auth method, and maps the result. No business rule lives here.
- *
- * Route -> hub.ts -> store/<driver>.ts is the deepest call chain in the server (three files).
- */
-
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -36,12 +29,9 @@ export interface AppDeps {
   readonly config: Config;
   readonly auth: Auth;
   readonly hub: Hub;
-  /** Only `openImage` is used here, for the public `/i/` route; everything else goes through the hub. */
   readonly store: Pick<AssetStore, "openImage">;
   readonly log: Logger;
-  /** Built `index.html` with a `<!--wih-boot-->` placeholder, read once at startup. */
   readonly shellTemplate: string;
-  /** Directory of the built client (`dist/client`). */
   readonly clientDir: string;
   /** Vite dev server only: its HMR client injects inline styles, so the shell gets no CSP. */
   readonly devMode?: boolean;
@@ -67,11 +57,9 @@ export function createApp(deps: AppDeps): Hono {
   const { config, auth, hub, store, log } = deps;
   const app = new Hono();
 
-  // ── Cross-cutting ──
   app.onError((error) => errorResponse(error, log));
   app.notFound(() => Response.json({ error: { code: "not_found" } } satisfies ErrorBody, { status: 404, headers: NO_STORE }));
   app.use("*", async (c, next) => {
-    // Compared to APP_URL, not the Host header, so the answer is the same behind any proxy.
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && c.req.header("Origin") !== config.appUrl.origin) {
       throw new HttpError("cross_origin");
     }
@@ -81,15 +69,13 @@ export function createApp(deps: AppDeps): Hono {
     c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   });
 
-  // ── Public ──
   app.get("/healthz", (c) => c.text("ok", 200, NO_STORE));
 
   // Hono answers HEAD from GET handlers (body dropped), so link checkers get headers only.
   app.get("/i/:file", async (c) => {
     const id = parseImageFileName(c.req.param("file"));
-    // Misses are cheap to answer and must never be pinned by a CDN in front of IMAGE_BASE_URL.
     if (id === null) return c.body(null, 404, NO_STORE);
-    const etag = `"${id}"`; // ids are never rewritten, so the id is a perfect validator
+    const etag = `"${id}"`;
     if (c.req.header("If-None-Match") === etag) {
       return c.body(null, 304, { ETag: etag, "Cache-Control": IMAGE_CACHE_CONTROL });
     }
@@ -113,14 +99,13 @@ export function createApp(deps: AppDeps): Hono {
   app.post("/auth/google", (c) => auth.handleSignIn(c.req.raw));
   app.post("/auth/logout", (c) => auth.handleLogout(c.req.raw));
 
-  // ── Members ──
   app.get("/api/assets", async (c) => {
     const actor = await auth.requireActor(c.req.raw);
     return c.json({ assets: await hub.list(actor) }, 200, NO_STORE);
   });
 
   app.post("/api/assets", async (c) => {
-    const actor = await auth.requireActor(c.req.raw); // before reading 20 MB from a stranger
+    const actor = await auth.requireActor(c.req.raw);
     const meta = parseUploadMeta(c.req.header(UPLOAD_META_HEADER));
     if (!meta.ok) throw new HttpError("invalid_input", { issue: meta.issue });
     const bytes = await readBodyCapped(c.req.raw, config.image.maxUploadBytes);
@@ -139,11 +124,10 @@ export function createApp(deps: AppDeps): Hono {
   app.delete("/api/assets/:id", async (c) => {
     const actor = await auth.requireActor(c.req.raw);
     const id = parseAssetId(c.req.param("id"));
-    if (id.ok) await hub.remove(actor, id.value); // malformed id: nothing to delete, still 204
+    if (id.ok) await hub.remove(actor, id.value);
     return c.body(null, 204, NO_STORE);
   });
 
-  // ── SPA ──
   app.get("/static/:file", async (c) => {
     const file = c.req.param("file");
     const type = STATIC_TYPES[file.slice(file.lastIndexOf("."))];
@@ -191,7 +175,6 @@ export function createApp(deps: AppDeps): Hono {
   return app;
 }
 
-/** BootConfig for this request. Locale: APP_LOCALE if pinned, else the toggle cookie, else Accept-Language. */
 export function buildBoot(config: Config, req: Request, session: SignedInBoot | SignedOutBoot): BootConfig {
   return {
     appName: config.appName,
@@ -212,11 +195,6 @@ export function buildBoot(config: Config, req: Request, session: SignedInBoot | 
   };
 }
 
-/**
- * Replaces `<!--wih-boot-->` with `<script id="wih-boot" type="application/json">…</script>` and sets
- * `<html lang>` and `<title>`. JSON is escaped for `<`, `>`, `&`, U+2028 and U+2029 so no value can
- * close the script tag. A JSON script block is data, not script, so CSP needs no nonce for it.
- */
 export function renderShell(template: string, boot: BootConfig): string {
   const json = JSON.stringify(boot).replace(SCRIPT_UNSAFE, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
   return template
@@ -225,11 +203,6 @@ export function renderShell(template: string, boot: BootConfig): string {
     .replace(/<title>[^<]*<\/title>/u, () => `<title>${escapeHtml(boot.appName)}</title>`);
 }
 
-/**
- * Derived from config, so the Drive origins appear only when Drive import is enabled and the image
- * origin follows IMAGE_BASE_URL. The Google Identity Services origins are always present because
- * the sign-in button needs them.
- */
 export function contentSecurityPolicy(config: Config): string {
   const drive = config.drive !== null;
   const imageOrigin = new URL(config.publicBaseUrl).origin;
@@ -259,7 +232,6 @@ export function contentSecurityPolicy(config: Config): string {
     .join("; ");
 }
 
-/** Maps anything thrown to a response (used by app.onError). Exported for tests. */
 export function errorResponse(error: unknown, log: Logger): Response {
   if (error instanceof HubError || error instanceof HttpError) {
     if (error.code === "storage_unavailable") log.log("WARNING", "storage.unavailable", { error: String(error.cause) });

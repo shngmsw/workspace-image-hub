@@ -1,5 +1,3 @@
-/** The HTTP shell end to end: real routes, hub, transcoder and memory store; a stub Auth. */
-
 import { describe, expect, it } from "vitest";
 
 import { photoPng } from "../../test/fixtures";
@@ -19,7 +17,6 @@ const quiet: Logger = { log() {} };
 const ORIGIN = "https://img.example.com";
 const SHELL = '<!doctype html><html lang="en"><head><title>x</title><!--wih-boot--></head><body></body></html>';
 
-/** Signed in as the `X-Test-User` header's address; no header = signed out. */
 const stubAuth: Auth = {
   issueNonce: () => ({ nonce: "test-nonce", setCookie: "__Host-wih_nonce=test-nonce; Path=/; HttpOnly; SameSite=Lax; Secure" }),
   handleSignIn: () => Promise.resolve(new Response(null, { status: 204 })),

@@ -1,15 +1,5 @@
-/**
- * Server error types. app.ts turns both into `ErrorBody` + status; anything else that escapes is a
- * bug and becomes `internal` (500) with the cause logged, never echoed.
- *
- * The split is a type guarantee: the core (hub, stores, transcoder) throws `HubError`, whose code is
- * a `DomainErrorCode`, so it cannot claim a transport failure such as `cross_origin`. The HTTP
- * shell and auth throw `HttpError` with a `TransportErrorCode` (shared/api.ts).
- */
-
 import type { ErrorCode, TransportErrorCode } from "../shared/api";
 
-/** Failures the core can report about an asset operation. */
 export type DomainErrorCode =
   | "forbidden"
   | "not_found"

@@ -1,8 +1,3 @@
-/**
- * The slice of Google Identity Services, the Google API loader and the Picker that this app calls.
- * These globals exist only after `loadScript` resolves (src/client/google.ts).
- */
-
 declare namespace google.accounts.id {
   interface CredentialResponse {
     readonly credential: string;

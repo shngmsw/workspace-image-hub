@@ -1,16 +1,3 @@
-/**
- * Google sign-in with a Workspace allow-list, and the stateless session that follows.
- *
- * Flow: GET / (no session) issues a nonce as an HttpOnly cookie and hands the same nonce to the
- * page, which initialises the Google Identity Services button with it. GIS returns an ID token to
- * the page, which POSTs it to /auth/google. The server verifies it with google-auth-library
- * (signature, issuer, audience = GOOGLE_CLIENT_ID, expiry), requires its `nonce` claim to equal the
- * cookie, runs `decideAccess`, and sets a session cookie (HS256 JWT via jose). No client secret,
- * no redirect URI, no server-side session table.
- *
- * Speaks Web-standard Request/Response only, so it does not care which router mounts it.
- */
-
 import { hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { OAuth2Client } from "google-auth-library";
@@ -24,29 +11,21 @@ import type { AccessPolicy, Config } from "./config";
 import { HttpError } from "./errors";
 import type { Logger } from "./log";
 
-/** Lifetime of the sign-in nonce between rendering the button and posting its credential. */
 export const NONCE_TTL_SECONDS = 15 * 60;
 const SIGN_IN_BODY_MAX_BYTES = 16 * 1024;
 const SESSION_AUDIENCE = "wih/session";
 
 declare const actorBrand: unique symbol;
 
-/**
- * A signed-in member who passes the *current* allow-list. Minted only inside this module, after the
- * session signature, expiry, and allow-list checks. Every Hub method takes one, so reaching the core
- * without authentication does not type-check; a cast would be visible in review.
- */
 export interface Actor {
   readonly [actorBrand]: true;
   readonly sub: string;
   readonly email: Email;
   readonly name: string;
   readonly picture: string | null;
-  /** Derived per request from ADMIN_EMAILS; never stored in the cookie. */
   readonly isAdmin: boolean;
 }
 
-/** What we keep from a validated Google ID token. */
 export interface GoogleIdentity {
   readonly sub: string;
   readonly email: string;
@@ -105,7 +84,6 @@ export function cookiePolicy(appUrl: URL): CookiePolicy {
   return { session: `${prefix}wih_session`, nonce: `${prefix}wih_nonce`, secure };
 }
 
-/** The claims we read from a verified Google ID token. */
 export interface IdTokenClaims {
   readonly sub: string;
   readonly email?: string | undefined;
@@ -116,7 +94,6 @@ export interface IdTokenClaims {
   readonly nonce?: string | undefined;
 }
 
-/** Verifies signature, issuer, audience and expiry of a Google ID token, or throws. */
 export type IdTokenVerifier = (idToken: string) => Promise<IdTokenClaims>;
 
 export function googleIdTokenVerifier(clientId: string): IdTokenVerifier {
@@ -130,42 +107,24 @@ export function googleIdTokenVerifier(clientId: string): IdTokenVerifier {
 }
 
 export interface Auth {
-  /**
-   * For GET / without a session: a fresh single-use nonce for the GIS button, and the Set-Cookie
-   * value that pins it to this browser.
-   */
   issueNonce(): { readonly nonce: string; readonly setCookie: string };
 
-  /**
-   * POST /auth/google with `{ credential }`. 204 + session cookie, or 401 (`login_failed`: bad
-   * token or nonce) / 403 (`not_allowed`, `email_unverified`) with a `SignInFailure` body. Always
-   * clears the nonce cookie. (The Origin check happens in app.ts.)
-   */
   handleSignIn(req: Request): Promise<Response>;
 
-  /** POST /auth/logout. Clears the session cookie; 204. Works with an expired session. */
   handleLogout(req: Request): Response;
 
-  /**
-   * Session cookie -> Actor, or null if missing, malformed, badly signed, expired, or no longer
-   * allowed by the current AccessPolicy (removing a domain from env and restarting locks existing
-   * sessions out immediately).
-   */
   actorFrom(req: Request): Promise<Actor | null>;
 
-  /** `actorFrom` or throw `HttpError("unauthenticated")`. What every /api route calls first. */
   requireActor(req: Request): Promise<Actor>;
 }
 
 export interface AuthDeps {
-  /** Injected for tests; defaults to Google's verifier for `config.auth.clientId`. */
   readonly verifyIdToken?: IdTokenVerifier;
 }
 
 export function createAuth(config: Pick<Config, "appUrl" | "auth" | "access">, log: Logger, deps: AuthDeps = {}): Auth {
   const cookies = cookiePolicy(config.appUrl);
   const verifyIdToken = deps.verifyIdToken ?? googleIdTokenVerifier(config.auth.clientId);
-  // A derived key, so AUTH_SECRET itself never signs anything and can seed other keys later.
   const sessionKey = new Uint8Array(hkdfSync("sha256", config.auth.secret, "", "wih/session/v1", 32));
   const issuer = config.appUrl.origin;
 

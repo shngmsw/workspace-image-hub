@@ -1,8 +1,3 @@
-/**
- * Catalog state. Mutated only from server responses (uploaded asset prepended, updated one
- * replaced, deleted one removed), so what the grid shows is always something the server confirmed.
- */
-
 import type { AssetId, AssetView } from "../shared/domain";
 
 export interface AssetsState {

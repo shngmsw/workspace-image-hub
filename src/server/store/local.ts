@@ -1,15 +1,3 @@
-/**
- * Local-disk store for docker compose / single-VM installs.
- *
- * Assumes one process owns DATA_DIR (one container). Per-id serialization is an in-process promise
- * chain; there is no cross-process lock, and config.ts refuses this driver on Cloud Run.
- *
- *   DATA_DIR/i/<id>.webp    images   (an operator may serve this directory with any static server
- *                                     and point IMAGE_BASE_URL at it; never serve DATA_DIR itself)
- *   DATA_DIR/r/<id>.json    records
- *   DATA_DIR/tmp/           staging for atomic writes; emptied at startup
- */
-
 import { randomUUID } from "node:crypto";
 import { link, mkdir, open, readdir, readFile, rename, rm, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -189,7 +177,6 @@ function unavailable(error: unknown): Error {
   return new HubError("storage_unavailable", undefined, { cause: error });
 }
 
-/** Serializes work per id. Entries are dropped once their tail settles, so the map stays small. */
 function keyedMutex(): <T>(id: AssetId, work: () => Promise<T>) => Promise<T> {
   const tails = new Map<AssetId, Promise<void>>();
   return async (id, work) => {

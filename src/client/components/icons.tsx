@@ -21,7 +21,6 @@ function Icon({ children, ...props }: IconProps & { readonly children: ReactElem
   );
 }
 
-/** A film frame with the safelight dot: the product mark. */
 export function Mark(props: IconProps) {
   return (
     <svg viewBox="0 0 32 32" width="1em" height="1em" aria-hidden="true" {...props}>

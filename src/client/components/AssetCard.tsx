@@ -14,7 +14,6 @@ export interface AssetCardProps {
   readonly index: number;
   readonly activeTagKeys: readonly string[];
   readonly onToggleTag: (key: string) => void;
-  /** Resolves with an error message to show, or null on success. */
   readonly onSaveTags: (tags: readonly string[]) => Promise<string | null>;
   readonly onDelete: () => void;
 }

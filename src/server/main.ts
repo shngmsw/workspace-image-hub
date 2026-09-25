@@ -1,8 +1,3 @@
-/**
- * Production process entry (`node dist/server/main.js`): parse env, compose, listen, drain on
- * SIGTERM. Nothing else.
- */
-
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -19,7 +14,7 @@ async function main(): Promise<void> {
   } catch (error) {
     if (error instanceof ConfigError) {
       log.log("ERROR", error.message, { issues: error.issues });
-      process.exit(78); // EX_CONFIG: restart loops won't fix a bad .env
+      process.exit(78);
     }
     throw error;
   }

@@ -4,10 +4,6 @@ import type { AssetView } from "../../shared/domain";
 import { useI18n } from "../i18n";
 import { TrashIcon, WarningIcon } from "./icons";
 
-/**
- * A modal <dialog>. The cache warning is part of the question, not small print: a deleted link
- * stops at the origin, but copies already cached downstream keep showing for a while.
- */
 export function ConfirmDelete({
   asset,
   onCancel,
@@ -15,7 +11,6 @@ export function ConfirmDelete({
 }: {
   readonly asset: AssetView;
   readonly onCancel: () => void;
-  /** Resolves with an error message to show, or null once deleted. */
   readonly onConfirm: () => Promise<string | null>;
 }) {
   const { t } = useI18n();

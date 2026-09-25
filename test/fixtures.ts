@@ -1,10 +1,7 @@
-/** Test images generated in code, so the repository carries no binary fixtures. */
-
 import sharp from "sharp";
 
 const bytes = (buffer: Buffer): Uint8Array<ArrayBuffer> => new Uint8Array(buffer);
 
-/** Photo-like: low-resolution noise scaled up, so neither PNG nor WebP compresses it trivially. */
 export async function photoPng(width: number, height: number): Promise<Uint8Array<ArrayBuffer>> {
   const seed = await sharp({
     create: {

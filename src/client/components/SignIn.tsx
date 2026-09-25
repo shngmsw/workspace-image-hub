@@ -7,7 +7,6 @@ import { useI18n } from "../i18n";
 import { LanguageToggle } from "./LanguageToggle";
 import { Mark, WarningIcon } from "./icons";
 
-/** The page without `auth_error`, so a successful retry does not keep showing the old refusal. */
 function cleanUrl(): string {
   const url = new URL(location.href);
   url.searchParams.delete("auth_error");
@@ -30,8 +29,6 @@ export function SignIn({ appName, session, localeFixed }: { readonly appName: st
       onCredential: (credential) => {
         setPhase("signing-in");
         void signIn(credential).then((refusal) => {
-          // The nonce is single-use, so every outcome reloads: success into the dashboard,
-          // a refusal into a fresh sign-in page that explains it.
           const next = new URL(cleanUrl(), location.origin);
           if (refusal !== null) next.searchParams.set("auth_error", refusal);
           location.replace(next);
@@ -88,7 +85,6 @@ export function SignIn({ appName, session, localeFixed }: { readonly appName: st
   );
 }
 
-/** Decorative: a heavy original becoming a light WebP, as three frames on a light table. */
 function ContactSheet() {
   return (
     <div aria-hidden="true" className="relative mx-auto hidden aspect-square w-full max-w-sm md:block">

@@ -11,7 +11,6 @@ interface I18n {
 
 const I18nContext = createContext<I18n | null>(null);
 
-/** Messages ship in the bundle, so switching language re-renders without a reload. */
 export function I18nProvider({ initial, children }: { readonly initial: Locale; readonly children: ReactNode }) {
   const [locale, setLocaleState] = useState(initial);
   const setLocale = useCallback((next: Locale) => {

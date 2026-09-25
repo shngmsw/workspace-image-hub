@@ -12,7 +12,6 @@ const ICONS: Readonly<Record<SnippetKind, (props: { className?: string }) => Rea
   markdown: MarkdownIcon,
 };
 
-/** URL / Google Chat JSON / Markdown, as one segmented control. The pressed one confirms in place. */
 export function CopyButtons({ asset, size = "sm" }: { readonly asset: Pick<AssetView, "url" | "originalName">; readonly size?: "sm" | "md" }) {
   const { t } = useI18n();
   const [done, setDone] = useState<{ readonly kind: SnippetKind; readonly ok: boolean } | null>(null);

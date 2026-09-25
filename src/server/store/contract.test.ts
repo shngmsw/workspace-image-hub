@@ -1,9 +1,3 @@
-/**
- * The AssetStore contract (store.ts), run against every driver. A driver is correct iff it passes
- * this suite; hub.ts relies on nothing else. The GCS run needs a real bucket and runs only when
- * GCS_TEST_BUCKET is set (a scratch bucket; the suite deletes what it writes).
- */
-
 import { randomBytes } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -29,7 +23,6 @@ import { type AssetStore, RecordNotFound, recordKey, StoreConflict } from "./sto
 
 interface Harness {
   readonly store: AssetStore;
-  /** Writes a record the codec cannot decode, the way a hand edit or a future version might. */
   readonly plantUndecodable: (id: AssetId) => Promise<void>;
   readonly warnings: string[];
 }

@@ -4,7 +4,6 @@ import type { UploadItem, UploadQueue } from "../uploads";
 import { CopyButtons } from "./CopyButtons";
 import { CheckIcon, CloseIcon, DriveIcon, RetryIcon, WarningIcon } from "./icons";
 
-/** One row per file, from the moment it is chosen until it has a link (or an error to retry). */
 export function UploadList({ items, queue }: { readonly items: readonly UploadItem[]; readonly queue: UploadQueue }) {
   const { t } = useI18n();
   if (items.length === 0) return null;
