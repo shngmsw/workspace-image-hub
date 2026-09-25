@@ -27,11 +27,8 @@ export interface IngestInput {
 
 export interface Hub {
   ingest(actor: Actor, input: IngestInput): Promise<AssetView>;
-
   list(actor: Actor): Promise<AssetView[]>;
-
   update(actor: Actor, id: AssetId, patch: AssetPatch): Promise<AssetView>;
-
   remove(actor: Actor, id: AssetId): Promise<void>;
 }
 

@@ -11,7 +11,7 @@ const ICONS: Readonly<Record<SnippetKind, (props: { className?: string }) => Rea
   markdown: MarkdownIcon,
 };
 
-export function CopyButtons({ asset, size = "sm" }: { readonly asset: Pick<AssetView, "url" | "originalName">; readonly size?: "sm" | "md" }) {
+export function CopyButtons({ asset }: { readonly asset: Pick<AssetView, "url" | "originalName"> }) {
   const { t } = useI18n();
   const [done, setDone] = useState<{ readonly kind: SnippetKind; readonly ok: boolean } | null>(null);
 
@@ -36,7 +36,6 @@ export function CopyButtons({ asset, size = "sm" }: { readonly asset: Pick<Asset
     );
   };
 
-  const pad = size === "md" ? "px-3 py-2 text-[13px]" : "px-2.5 py-1.5 text-xs";
   return (
     <div className="@container flex w-full overflow-hidden rounded-full border border-line bg-paper/60" role="group">
       {SNIPPET_KINDS.map((kind) => {
@@ -51,7 +50,7 @@ export function CopyButtons({ asset, size = "sm" }: { readonly asset: Pick<Asset
             onClick={() => {
               copy(kind);
             }}
-            className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap border-line font-medium transition-colors not-first:border-l hover:bg-accent-soft hover:text-ink active:scale-[0.98] ${pad} ${
+            className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap border-line font-medium transition-colors not-first:border-l hover:bg-accent-soft hover:text-ink active:scale-[0.98] px-2.5 py-1.5 text-xs ${
               confirmed ? (done.ok ? "bg-accent text-accent-ink hover:bg-accent hover:text-accent-ink" : "bg-danger-soft text-danger") : "text-ink/85"
             }`}
           >

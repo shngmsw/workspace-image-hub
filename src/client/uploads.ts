@@ -73,7 +73,6 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
   const emit = () => {
     options.onChange(items);
   };
-  const statusOf = (key: string) => items.find((i) => i.key === key)?.status;
   const set = (key: string, status: UploadStatus) => {
     items = items.map((i) => (i.key === key ? { ...i, status } : i));
     emit();
@@ -137,9 +136,8 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
       pump();
     },
     retry(key) {
-      if (statusOf(key)?.state !== "failed") return;
       const item = items.find((i) => i.key === key);
-      if (item !== undefined && item.file.size > options.maxBytes) return;
+      if (item?.status.state !== "failed" || item.file.size > options.maxBytes) return;
       set(key, { state: "queued" });
       pump();
     },
@@ -157,8 +155,7 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
 
 function failure(error: unknown): UploadStatus {
   if (error instanceof ApiError) {
-    const issue = error.detail?.["issue"];
-    return typeof issue === "string" ? { state: "failed", code: error.code, issue: issue as InputIssue } : { state: "failed", code: error.code };
+    return error.issue === null ? { state: "failed", code: error.code } : { state: "failed", code: error.code, issue: error.issue };
   }
   if (error instanceof DriveDownloadError) return { state: "failed", code: "drive_download" };
   return { state: "failed", code: "network" };

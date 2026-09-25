@@ -27,7 +27,7 @@ export const ENV_DOCS_JA: Readonly<Record<EnvName, string>> = {
   IMAGE_MAX_INPUT_PIXELS: "1 回のアップロードで展開してよい画素数（アニメーションは全フレーム合計、1000000〜1000000000）。画素爆弾からメモリを守る。",
 };
 
-const specs: readonly EnvVarSpec[] = ENV_VARS;
+const specs: readonly (EnvVarSpec & { readonly name: EnvName })[] = ENV_VARS;
 
 function wrap(text: string, width: number): string[] {
   const lines: string[] = [];
@@ -70,7 +70,7 @@ export function renderEnvTable(locale: "en" | "ja"): string {
   const ja = locale === "ja";
   const header = ja ? ["変数", "既定値", "説明"] : ["Variable", "Default", "Description"];
   const rows = specs.map((v) => {
-    const doc = ja ? ENV_DOCS_JA[v.name as EnvName] : v.doc;
+    const doc = ja ? ENV_DOCS_JA[v.name] : v.doc;
     const fallback = v.required === true ? (ja ? "**必須**" : "**required**") : v.required === "gcs" ? (ja ? "gcs のとき必須" : "required for gcs") : "";
     const value = v.default === undefined || v.default === "" ? fallback : `\`${v.default}\``;
     return `| \`${v.name}\` | ${value} | ${doc.replaceAll("|", "\\|")} |`;

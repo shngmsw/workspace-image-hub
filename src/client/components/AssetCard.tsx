@@ -6,7 +6,6 @@ import { formatBytes } from "../../shared/i18n";
 import { useI18n } from "../i18n";
 import { splitTags } from "../tags";
 import { CopyButtons } from "./CopyButtons";
-
 import { TagIcon, TrashIcon } from "./icons";
 
 export interface AssetCardProps {

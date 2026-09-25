@@ -108,13 +108,9 @@ export function googleIdTokenVerifier(clientId: string): IdTokenVerifier {
 
 export interface Auth {
   issueNonce(): { readonly nonce: string; readonly setCookie: string };
-
   handleSignIn(req: Request): Promise<Response>;
-
   handleLogout(req: Request): Response;
-
   actorFrom(req: Request): Promise<Actor | null>;
-
   requireActor(req: Request): Promise<Actor>;
 }
 

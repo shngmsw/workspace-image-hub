@@ -33,8 +33,7 @@ export function Dashboard({ boot, session }: { readonly boot: BootConfig; readon
   const messageOf = useCallback(
     (error: unknown): string => {
       if (!(error instanceof ApiError)) return t.errors.network;
-      const issue = error.detail?.["issue"];
-      return typeof issue === "string" && issue in t.inputIssues ? t.inputIssues[issue as keyof typeof t.inputIssues] : t.errors[error.code];
+      return error.issue === null ? t.errors[error.code] : t.inputIssues[error.issue];
     },
     [t],
   );

@@ -172,8 +172,7 @@ function errorCode(error: unknown): string | undefined {
   return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : undefined;
 }
 
-function unavailable(error: unknown): Error {
-  if (error instanceof HubError || error instanceof StoreConflict || error instanceof RecordNotFound) return error;
+function unavailable(error: unknown): HubError {
   return new HubError("storage_unavailable", undefined, { cause: error });
 }
 

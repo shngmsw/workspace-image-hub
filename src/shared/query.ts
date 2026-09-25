@@ -6,18 +6,14 @@ export interface AssetQuery {
   readonly tagKeys: readonly string[];
 }
 
-export const EMPTY_QUERY: AssetQuery = { text: "", tagKeys: [] };
-
-export const normalizeForSearch = foldForMatch;
-
 function haystack(asset: AssetView): string {
   return [asset.originalName, ...asset.tags, asset.uploadedBy.name, asset.uploadedBy.email, asset.id]
-    .map(normalizeForSearch)
+    .map(foldForMatch)
     .join("\n");
 }
 
 export function filterAssets(assets: readonly AssetView[], query: AssetQuery): AssetView[] {
-  const terms = normalizeForSearch(query.text).split(/\s+/u).filter((t) => t !== "");
+  const terms = foldForMatch(query.text).split(/\s+/u).filter((t) => t !== "");
   if (terms.length === 0 && query.tagKeys.length === 0) return [...assets];
   return assets.filter((asset) => {
     if (query.tagKeys.length > 0) {
@@ -54,7 +50,7 @@ export function tagCounts(assets: readonly AssetView[]): TagCount[] {
 export function queryFromSearch(search: URLSearchParams): AssetQuery {
   return {
     text: search.get("q") ?? "",
-    tagKeys: [...new Set(search.getAll("tag").map(normalizeForSearch).filter((k) => k !== ""))],
+    tagKeys: [...new Set(search.getAll("tag").map(foldForMatch).filter((k) => k !== ""))],
   };
 }
 

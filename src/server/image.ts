@@ -108,11 +108,6 @@ function semaphore(limit: number): () => Promise<() => void> {
   return async () => {
     if (active < limit) active += 1;
     else await new Promise<void>((resolve) => waiting.push(resolve));
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      release();
-    };
+    return release;
   };
 }

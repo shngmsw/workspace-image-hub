@@ -12,17 +12,20 @@ import {
   type UploadMeta,
   encodeUploadMeta,
 } from "../shared/api";
-import type { AssetId, AssetView } from "../shared/domain";
+import { type AssetId, type AssetView, type InputIssue, parseInputIssue } from "../shared/domain";
 
 type Detail = Readonly<Record<string, string | number>>;
 
 export class ApiError extends Error {
+  readonly issue: InputIssue | null;
+
   constructor(
     readonly code: ErrorCode,
-    readonly detail?: Detail,
+    detail?: Detail,
   ) {
     super(code);
     this.name = "ApiError";
+    this.issue = parseInputIssue(detail?.["issue"]);
   }
 }
 

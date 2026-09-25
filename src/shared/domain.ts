@@ -3,14 +3,21 @@ export type Brand<T, B extends string> = T & { readonly [brand]: B };
 
 export type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly issue: InputIssue };
 
-export type InputIssue =
-  | "asset_id_malformed"
-  | "tag_empty"
-  | "tag_too_long"
-  | "tag_forbidden_char"
-  | "too_many_tags"
-  | "source_unknown"
-  | "body_malformed";
+const INPUT_ISSUES = [
+  "asset_id_malformed",
+  "tag_empty",
+  "tag_too_long",
+  "tag_forbidden_char",
+  "too_many_tags",
+  "source_unknown",
+  "body_malformed",
+] as const;
+
+export type InputIssue = (typeof INPUT_ISSUES)[number];
+
+export function parseInputIssue(raw: unknown): InputIssue | null {
+  return INPUT_ISSUES.find((issue) => issue === raw) ?? null;
+}
 
 const ok = <T>(value: T): Parsed<T> => ({ ok: true, value });
 const fail = <T>(issue: InputIssue): Parsed<T> => ({ ok: false, issue });
@@ -194,10 +201,6 @@ export interface AssetView {
   readonly canDelete: boolean;
 }
 
-export function publicUrl(publicBaseUrl: string, id: AssetId): string {
-  return `${publicBaseUrl}/${id}.webp`;
-}
-
 export function canDelete(viewer: Viewer, record: AssetRecord): boolean {
   return viewer.isAdmin || viewer.email === record.uploadedBy.email;
 }
@@ -205,7 +208,7 @@ export function canDelete(viewer: Viewer, record: AssetRecord): boolean {
 export function toView(record: AssetRecord, ctx: { readonly publicBaseUrl: string; readonly viewer: Viewer }): AssetView {
   return {
     id: record.id,
-    url: publicUrl(ctx.publicBaseUrl, record.id),
+    url: `${ctx.publicBaseUrl}/${record.id}.webp`,
     tags: record.tags,
     originalName: record.originalName,
     source: record.source,
