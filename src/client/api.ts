@@ -26,13 +26,16 @@ export class ApiError extends Error {
   }
 }
 
-function errorFrom(status: number, text: string): ApiError {
-  let body: Partial<ErrorBody> = {};
+function tryParseJson(text: string): unknown {
   try {
-    body = JSON.parse(text) as Partial<ErrorBody>;
+    return JSON.parse(text);
   } catch {
-    // Not our JSON (a proxy's error page): fall back to the status.
+    return null;
   }
+}
+
+function errorFrom(status: number, text: string): ApiError {
+  const body = (tryParseJson(text) ?? {}) as Partial<ErrorBody>;
   const code = body.error?.code ?? (status === 401 ? "unauthenticated" : "internal");
   if (code === "unauthenticated") location.reload();
   return new ApiError(code, body.error?.detail);

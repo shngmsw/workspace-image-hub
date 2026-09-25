@@ -19,7 +19,13 @@ import { encodeRecord } from "./store";
 
 const GCS_CUSTOM_METADATA_LIMIT = 8 * 1024;
 
-const HOSTILE_CHARS = ["𠮷", "\u0001", "\ud800", '"', "\\"];
+const HOSTILE_CHARS = {
+  astralFourByteUtf8: "𠮷",
+  controlCharSixByteEscape: "\u0001",
+  loneSurrogate: "\ud800",
+  quote: '"',
+  backslash: "\\",
+};
 
 function worstCaseRecord(char: string): AssetRecord {
   const tags = parseTags(
@@ -51,7 +57,7 @@ function worstCaseRecord(char: string): AssetRecord {
 }
 
 describe("worst-case record size", () => {
-  it.each(HOSTILE_CHARS)("fits GCS custom metadata after base64url (%j)", (char) => {
+  it.each(Object.entries(HOSTILE_CHARS))("fits GCS custom metadata after base64url (%s)", (_case, char) => {
     const record = worstCaseRecord(char);
     expect(record.tags).toHaveLength(TAGS_MAX);
     const encoded = Buffer.from(encodeRecord(record)).toString("base64url");

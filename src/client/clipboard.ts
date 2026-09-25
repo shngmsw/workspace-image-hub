@@ -5,12 +5,11 @@
  */
 export async function copyText(text: string): Promise<void> {
   if (window.isSecureContext && "clipboard" in navigator) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // Fall through to the legacy path.
-    }
+    const written = await navigator.clipboard.writeText(text).then(
+      () => true,
+      () => false,
+    );
+    if (written) return;
   }
   const area = document.createElement("textarea");
   area.value = text;

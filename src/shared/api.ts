@@ -63,6 +63,8 @@ export interface ListAssetsResponse {
  */
 export const UPLOAD_META_HEADER = "X-Upload-Meta";
 
+export const TRANSCODE_CONCURRENCY = 2;
+
 export interface UploadMeta {
   readonly filename: string;
   readonly source: AssetSource;

@@ -1,5 +1,6 @@
 import sharp, { type Metadata } from "sharp";
 
+import { TRANSCODE_CONCURRENCY } from "../shared/api";
 import { HubError } from "./errors";
 
 // The server never re-reads the same input; the libvips operation cache would only hold memory.
@@ -15,8 +16,6 @@ export type InputFormat = "jpeg" | "png" | "webp" | "gif" | "avif" | "tiff";
 export const ACCEPTED_FORMATS: readonly InputFormat[] = ["jpeg", "png", "webp", "gif", "avif", "tiff"];
 
 export const ACCEPTED_MIME_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/avif,image/tiff";
-
-export const TRANSCODE_CONCURRENCY = 2;
 
 export interface TranscodePolicy {
   readonly maxDimension: number;

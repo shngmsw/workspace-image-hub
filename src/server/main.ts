@@ -7,6 +7,8 @@ import { composeApp } from "./compose";
 import { type Config, ConfigError, loadConfig } from "./config";
 import { jsonLogger as log } from "./log";
 
+const EX_CONFIG = 78;
+
 async function main(): Promise<void> {
   let config: Config;
   try {
@@ -14,7 +16,7 @@ async function main(): Promise<void> {
   } catch (error) {
     if (error instanceof ConfigError) {
       log.log("ERROR", error.message, { issues: error.issues });
-      process.exit(78);
+      process.exit(EX_CONFIG);
     }
     throw error;
   }

@@ -1,4 +1,4 @@
-import type { ClientErrorCode, ErrorCode, UploadMeta } from "../shared/api";
+import { type ClientErrorCode, type ErrorCode, TRANSCODE_CONCURRENCY, type UploadMeta } from "../shared/api";
 import type { AssetSource, AssetView, InputIssue } from "../shared/domain";
 import { ApiError, uploadAsset } from "./api";
 
@@ -63,8 +63,6 @@ export interface UploadQueueOptions {
   readonly upload?: Uploader;
 }
 
-export const UPLOAD_CONCURRENCY = 2;
-
 export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
   const upload = options.upload ?? uploadAsset;
   const controllers = new Map<string, AbortController>();
@@ -86,7 +84,7 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
   };
 
   function pump(): void {
-    while (running < UPLOAD_CONCURRENCY) {
+    while (running < TRANSCODE_CONCURRENCY) {
       const next = [...items].reverse().find((i) => i.status.state === "queued");
       if (next === undefined) return;
       running += 1;
