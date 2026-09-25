@@ -49,7 +49,6 @@ describe("hub.ingest", () => {
     expect([view.width, view.height]).toEqual([1024, 256]);
     expect(view.originalName).toBe("spinner.gif");
     expect(view.url).toBe(`https://img.example.com/i/${view.id}.webp`);
-    expect(snippet("chat", view)).toBe(`{"avatarUrl":"https://img.example.com/i/${view.id}.webp"}`);
     expect(snippet("markdown", view)).toBe(`![spinner.gif](https://img.example.com/i/${view.id}.webp)`);
     expect(view.uploadedBy).toEqual({ email: "alice@example.com", name: "Alice" });
     expect(view.canDelete).toBe(true);

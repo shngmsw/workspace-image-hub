@@ -4,11 +4,10 @@ import type { AssetView } from "../../shared/domain";
 import { SNIPPET_KINDS, type SnippetKind, snippet } from "../../shared/snippets";
 import { copyText } from "../clipboard";
 import { useI18n } from "../i18n";
-import { ChatIcon, CheckIcon, LinkIcon, MarkdownIcon } from "./icons";
+import { CheckIcon, LinkIcon, MarkdownIcon } from "./icons";
 
 const ICONS: Readonly<Record<SnippetKind, (props: { className?: string }) => ReactElement>> = {
   url: LinkIcon,
-  chat: ChatIcon,
   markdown: MarkdownIcon,
 };
 

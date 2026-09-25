@@ -134,8 +134,8 @@ export const en: Messages = {
     grew: (from, to, percent) => `${from} → ${to} (${percent}% larger)`,
   },
   copy: {
-    labels: { url: "Copy URL", chat: "Copy Google Chat JSON", markdown: "Copy Markdown" },
-    short: { url: "URL", chat: "Chat JSON", markdown: "Markdown" },
+    labels: { url: "Copy URL", markdown: "Copy Markdown" },
+    short: { url: "URL", markdown: "Markdown" },
     copied: "Copied",
     failed: "Could not copy",
   },
@@ -220,8 +220,8 @@ export const ja: Messages = {
     grew: (from, to, percent) => `${from} → ${to}（${percent}% 増加）`,
   },
   copy: {
-    labels: { url: "直リンクをコピー", chat: "Google Chat 用 JSON をコピー", markdown: "Markdown をコピー" },
-    short: { url: "URL", chat: "Chat JSON", markdown: "Markdown" },
+    labels: { url: "直リンクをコピー", markdown: "Markdown をコピー" },
+    short: { url: "URL", markdown: "Markdown" },
     copied: "コピー済み",
     failed: "コピーできませんでした",
   },

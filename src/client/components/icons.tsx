@@ -52,13 +52,6 @@ export const LinkIcon = (p: IconProps) => (
   </Icon>
 );
 
-export const ChatIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M4 5h16v11H9l-5 4z" />
-    <path d="M9 9.5 7.5 11 9 12.5M15 9.5l1.5 1.5-1.5 1.5" />
-  </Icon>
-);
-
 export const MarkdownIcon = (p: IconProps) => (
   <Icon {...p}>
     <rect x="2.5" y="5.5" width="19" height="13" rx="2" />

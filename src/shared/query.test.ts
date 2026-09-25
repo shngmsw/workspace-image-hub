@@ -53,10 +53,9 @@ describe("filterAssets", () => {
 });
 
 describe("snippets", () => {
-  it("formats URL, Google Chat JSON and Markdown with the file name as alt text", () => {
+  it("formats URL and Markdown with the file name as alt text", () => {
     const a = { url: "https://img.example.com/i/x.webp", originalName: "logo [v2].png" as FileName };
     expect(snippet("url", a)).toBe("https://img.example.com/i/x.webp");
-    expect(snippet("chat", a)).toBe('{"avatarUrl":"https://img.example.com/i/x.webp"}');
     expect(snippet("markdown", a)).toBe("![logo \\[v2\\].png](https://img.example.com/i/x.webp)");
     expect(snippet("markdown", { ...a, url: "https://cdn.example.com/a (1)/x.webp" })).toBe(
       "![logo \\[v2\\].png](https://cdn.example.com/a%20%281%29/x.webp)",

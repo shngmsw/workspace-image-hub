@@ -1,7 +1,7 @@
 {
   "name": "workspace-image-hub",
   "version": "0.1.0",
-  "description": "Self-hosted WebP image hub for Google Workspace: Drive picker, domain-restricted sign-in, Google Chat avatarUrl copy.",
+  "description": "Self-hosted WebP image hub for Google Workspace: Drive picker, domain-restricted sign-in, direct-link and Markdown copy.",
   "license": "MIT",
   "private": true,
   "type": "module",

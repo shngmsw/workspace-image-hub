@@ -1,15 +1,13 @@
 import type { AssetView } from "./domain";
 
-export type SnippetKind = "url" | "chat" | "markdown";
+export type SnippetKind = "url" | "markdown";
 
-export const SNIPPET_KINDS: readonly SnippetKind[] = ["url", "chat", "markdown"];
+export const SNIPPET_KINDS: readonly SnippetKind[] = ["url", "markdown"];
 
 export function snippet(kind: SnippetKind, asset: Pick<AssetView, "url" | "originalName">): string {
   switch (kind) {
     case "url":
       return asset.url;
-    case "chat":
-      return JSON.stringify({ avatarUrl: asset.url });
     case "markdown":
       return `![${escapeMarkdownAlt(asset.originalName)}](${escapeMarkdownUrl(asset.url)})`;
   }
