@@ -10,6 +10,10 @@ export default defineConfig({
     // One dev port serves the SPA with HMR and the real Hono app, composed exactly like main.ts.
     devServer({ entry: "src/server/dev.ts", exclude: [/^\/src\/.*/, /^\/@.*/, /^\/node_modules\/.*/] }),
   ],
+  server: {
+    // The dev DATA_DIR (./data) receives every upload; watching it only costs file handles.
+    watch: { ignored: ["**/data/**", "**/dist/**"] },
+  },
   build: {
     outDir: "dist/client",
     // `static/` rather than Vite's default `assets/`, so build files never look like /api/assets.

@@ -1,1 +1,161 @@
 @import "tailwindcss";
+
+/*
+ * A darkroom contact sheet: warm paper and ink by day, a charcoal darkroom by night, and one
+ * safelight accent. Colours are tokens so both schemes share every class.
+ */
+
+@theme {
+  --font-sans: "Instrument Sans Variable", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  --font-display: "Instrument Serif", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
+  --font-mono: "Fragment Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  --ease-develop: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-well: var(--well);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+}
+
+:root {
+  color-scheme: light;
+  --paper: #efeae0;
+  --sheet: #faf8f3;
+  --well: #e6e0d3;
+  --ink: #1e1b16;
+  --muted: #6d665a;
+  --line: #d6cebd;
+  --accent: #cf4a22;
+  --accent-ink: #fff8f2;
+  --accent-soft: #f5d8c9;
+  --danger: #b1261d;
+  --danger-soft: #f6dcd8;
+  --ok: #2f6b4b;
+  --table: #f7f4ee;
+  --checker: #e4ddcf;
+  --grain-opacity: 0.07;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #121110;
+    --sheet: #1a1917;
+    --well: #0d0c0b;
+    --ink: #ede6d8;
+    --muted: #9a9283;
+    --line: #322f2a;
+    --accent: #ff6b3f;
+    --accent-ink: #1b0c06;
+    --accent-soft: #3b1c11;
+    --danger: #ff8b80;
+    --danger-soft: #3a1714;
+    --ok: #86c9a3;
+    /* Still a lit table: most uploads are logos and avatars drawn for light backgrounds. */
+    --table: #c9c3b7;
+    --checker: #b8b1a3;
+    --grain-opacity: 0.05;
+  }
+}
+
+@layer base {
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Film grain over everything, so flat colour reads as paper rather than a screen. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.4 -0.2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Transparent pixels show as a light-table checkerboard. */
+  .checker {
+    background-color: var(--table);
+    background-image: repeating-conic-gradient(var(--checker) 0 25%, transparent 0 50%);
+    background-size: 18px 18px;
+  }
+  /* Crop marks in a sheet's corners. */
+  .crop-marks {
+    --mark: var(--accent);
+    background:
+      linear-gradient(var(--mark), var(--mark)) top 14px left 14px / 18px 1.5px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) top 14px left 14px / 1.5px 18px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) top 14px right 14px / 18px 1.5px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) top 14px right 14px / 1.5px 18px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) bottom 14px left 14px / 18px 1.5px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) bottom 14px left 14px / 1.5px 18px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) bottom 14px right 14px / 18px 1.5px no-repeat,
+      linear-gradient(var(--mark), var(--mark)) bottom 14px right 14px / 1.5px 18px no-repeat;
+  }
+  .develop {
+    animation: develop 0.6s var(--ease-develop) both;
+  }
+  /* The server is converting: the bar keeps a slow safelight sweep. */
+  .converting {
+    background-image: linear-gradient(90deg, transparent 0%, var(--accent) 40%, var(--accent) 60%, transparent 100%);
+    background-size: 50% 100%;
+    background-repeat: no-repeat;
+    animation: sweep 1.3s ease-in-out infinite;
+  }
+}
+
+@keyframes develop {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: saturate(0) brightness(1.15);
+  }
+}
+
+@keyframes sweep {
+  from {
+    background-position: -100% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -60,6 +60,7 @@ const STATIC_TYPES: Readonly<Record<string, string>> = {
   ".webp": "image/webp",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
+  ".woff": "font/woff",
 };
 
 export function createApp(deps: AppDeps): Hono {
@@ -240,8 +241,9 @@ export function contentSecurityPolicy(config: Config): string {
     "form-action": ["'self'"],
     "img-src": ["'self'", "data:", "blob:", imageOrigin, "https://*.googleusercontent.com"],
     "script-src": ["'self'", "https://accounts.google.com/gsi/client", ...(drive ? ["https://apis.google.com"] : [])],
-    // The Picker injects its dialog chrome into the page with inline styles.
-    "style-src": ["'self'", "https://accounts.google.com/gsi/style", ...(drive ? ["'unsafe-inline'"] : [])],
+    // The GIS button and the Picker inject inline <style> elements and style attributes into the
+    // page (verified with a CSP report). Scripts stay strict; React escapes all markup.
+    "style-src": ["'self'", "'unsafe-inline'", "https://accounts.google.com/gsi/style"],
     "frame-src": [
       "https://accounts.google.com/gsi/",
       ...(drive ? ["https://accounts.google.com", "https://docs.google.com", "https://drive.google.com"] : []),

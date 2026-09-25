@@ -67,6 +67,7 @@ export interface Messages {
     readonly admin: string;
   };
   readonly upload: {
+    readonly queueHeading: string;
     readonly dropHere: string;
     readonly browse: string;
     readonly pasteHint: string;
@@ -132,6 +133,7 @@ export const en: Messages = {
   },
   header: { signOut: "Sign out", language: "Language", admin: "Admin" },
   upload: {
+    queueHeading: "Uploads",
     dropHere: "Drop images here, or",
     browse: "choose files",
     pasteHint: "You can also paste an image.",
@@ -217,6 +219,7 @@ export const ja: Messages = {
   },
   header: { signOut: "ログアウト", language: "言語", admin: "管理者" },
   upload: {
+    queueHeading: "アップロード",
     dropHere: "画像をここにドロップ、または",
     browse: "ファイルを選択",
     pasteHint: "画像の貼り付けにも対応しています。",
@@ -238,7 +241,7 @@ export const ja: Messages = {
   copy: {
     labels: { url: "直リンクをコピー", chat: "Google Chat 用 JSON をコピー", markdown: "Markdown をコピー" },
     short: { url: "URL", chat: "Chat JSON", markdown: "Markdown" },
-    copied: "コピーしました",
+    copied: "コピー済み",
     failed: "コピーできませんでした",
   },
   assets: {
