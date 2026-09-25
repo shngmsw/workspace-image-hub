@@ -56,12 +56,18 @@ export default defineConfig(
     ignores: ["src/**/*.test.ts"],
     rules: {
       "no-restricted-syntax": ["error", ...envBans],
-      "no-restricted-imports": [
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": [
         "error",
         {
           patterns: [
             testingBan,
-            { group: ["**/server/**", "../server/*"], message: "The browser bundle must not import server modules." },
+            {
+              group: ["**/server/**", "../server/*"],
+              // Types are erased, so they cannot pull server code into the browser bundle.
+              allowTypeImports: true,
+              message: "The browser bundle must not import server modules (type-only imports are fine).",
+            },
             { group: ["node:*"], message: "Shared and client code runs in the browser." },
           ],
         },
