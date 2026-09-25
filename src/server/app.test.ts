@@ -104,7 +104,7 @@ describe("HTTP shell", () => {
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: { code: "unauthenticated" } });
     expect((await app.request("/i/not-an-id.webp")).status).toBe(404);
-    expect((await app.request("/healthz")).status).toBe(200);
+    expect((await app.request("/health")).status).toBe(200);
   });
 
   it("refuses cross-origin writes before anything else", async () => {

@@ -6,7 +6,7 @@ import type { Locale } from "./i18n";
 export const ROUTES = {
   shell: { method: "GET", path: "/", auth: "public", note: "SPA shell + BootConfig; sign-in screen when no session" },
   static: { method: "GET", path: "/static/*", auth: "public", note: "content-hashed build assets, immutable" },
-  health: { method: "GET", path: "/healthz", auth: "public", note: "liveness; touches no storage" },
+  health: { method: "GET", path: "/health", auth: "public", note: "liveness; touches no storage" },
   image: { method: "GET", path: "/i/:id.webp", auth: "public", note: "public direct link; immutable; HEAD too" },
   signIn: { method: "POST", path: "/auth/google", auth: "public", note: "JSON {credential} from Google Identity Services; 204 + session cookie" },
   logout: { method: "POST", path: "/auth/logout", auth: "public", note: "clears the cookie; works with an expired session" },

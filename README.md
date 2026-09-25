@@ -17,7 +17,7 @@ Sign-in is Google's "Sign in with Google" button, limited to the Workspace domai
 - Copies a link as a plain URL or as Markdown, `![file name](url)`.
 - Lists every image newest first. Search covers file names, tags, uploaders, and ids, ignores case, and treats katakana and hiragana as the same. Tag filters, tag editing, and the size before and after conversion are on every card. An image takes up to 20 tags of up to 32 characters each.
 - Lets in Workspace accounts from `ALLOWED_DOMAINS` and individual accounts from `ALLOWED_EMAILS`. `ADMIN_EMAILS` may delete anything.
-- Runs from one Docker image (linux/amd64 and linux/arm64) on a local disk or on Cloud Run with Cloud Storage, with `/healthz`, JSON logs, and a startup check that lists every configuration problem and exits.
+- Runs from one Docker image (linux/amd64 and linux/arm64) on a local disk or on Cloud Run with Cloud Storage, with `/health`, JSON logs, and a startup check that lists every configuration problem and exits.
 - Speaks Japanese and English. `APP_LOCALE` pins one language. Otherwise the user's toggle decides, then the browser's `Accept-Language`.
 
 ## Use with Google Chat

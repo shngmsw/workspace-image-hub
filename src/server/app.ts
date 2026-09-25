@@ -69,7 +69,7 @@ export function createApp(deps: AppDeps): Hono {
     c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   });
 
-  app.get("/healthz", (c) => c.text("ok", 200, NO_STORE));
+  app.get("/health", (c) => c.text("ok", 200, NO_STORE));
 
   // Hono answers HEAD from GET handlers (body dropped), so link checkers get headers only.
   app.get("/i/:file", async (c) => {

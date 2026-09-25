@@ -17,7 +17,7 @@ Workspace Image Hub は、Google Workspace を使う組織向けのセルフホ�
 - コピーは URL そのままか、Markdown の `![ファイル名](URL)` の 2 種類です。
 - ライブラリでは全画像を新しい順に並べ、ファイル名、タグ、登録者、ID で検索できます。大文字と小文字、カタカナとひらがなの違いは無視します。タグでの絞り込み、タグの編集、変換前後のサイズ表示もあります。タグは 1 枚につき 20 個まで、1 つ 32 文字までです。
 - ログインできるのは `ALLOWED_DOMAINS` のドメインの Workspace アカウントと、`ALLOWED_EMAILS` に列挙した個別のアカウントです。`ADMIN_EMAILS` に入れた人は誰の画像でも削除できます。
-- Docker イメージ 1 つ（linux/amd64 と linux/arm64）で、ローカルディスクでも、Cloud Run と Cloud Storage の組み合わせでも動きます。`/healthz`、JSON 形式のログ、起動時の設定チェック（問題を全部並べて終了する）が付いています。
+- Docker イメージ 1 つ（linux/amd64 と linux/arm64）で、ローカルディスクでも、Cloud Run と Cloud Storage の組み合わせでも動きます。`/health`、JSON 形式のログ、起動時の設定チェック（問題を全部並べて終了する）が付いています。
 - 画面は日本語と英語で、`APP_LOCALE` で固定できます。未設定なら利用者の切り替え、次にブラウザの言語で決めます。
 
 ## Google Chat で使うとき
