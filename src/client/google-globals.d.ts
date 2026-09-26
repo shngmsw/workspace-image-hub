@@ -59,13 +59,15 @@ declare namespace google.picker {
     readonly docs?: readonly PickedDoc[];
   }
   const Action: { readonly PICKED: string; readonly CANCEL: string };
-  const ViewId: { readonly DOCS_IMAGES: string };
+  const ViewId: { readonly DOCS: string };
   const Feature: { readonly MULTISELECT_ENABLED: string; readonly SUPPORT_DRIVES: string };
   class DocsView {
     constructor(viewId?: string);
     setMimeTypes(mimeTypes: string): DocsView;
     setIncludeFolders(include: boolean): DocsView;
     setEnableDrives(enable: boolean): DocsView;
+    setParent(parentId: string): DocsView;
+    setOwnedByMe(me: boolean): DocsView;
   }
   interface Picker {
     setVisible(visible: boolean): void;
