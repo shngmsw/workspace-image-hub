@@ -40,6 +40,10 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    files: ["site/**/*.js"],
+    languageOptions: { globals: globals.browser, sourceType: "script" },
+  },
+  {
     files: ["src/client/**/*.{ts,tsx}"],
     extends: [reactHooks.configs.flat.recommended],
     languageOptions: { globals: globals.browser },

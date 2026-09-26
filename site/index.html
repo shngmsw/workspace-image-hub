@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#efeae0" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121110" />
+    <title>Workspace Image Hub — ドライブの画像を、変わらない直リンクに</title>
+    <meta
+      name="description"
+      content="Google ドライブやローカルの画像を一度だけ WebP に変換し、Google Chat・GitHub・Notion に貼れる直リンクを返す、Google Workspace の組織向けセルフホスト型アプリ。MIT ライセンス。"
+    />
+    <link rel="alternate" hreflang="ja" href="https://shngmsw.github.io/workspace-image-hub/" />
+    <link rel="alternate" hreflang="en" href="https://shngmsw.github.io/workspace-image-hub/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://shngmsw.github.io/workspace-image-hub/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Workspace Image Hub" />
+    <meta
+      property="og:description"
+      content="Google ドライブやローカルの画像を WebP に変換し、Google Chat・GitHub・Notion に貼れる変わらない直リンクを返すセルフホスト型アプリ。"
+    />
+    <meta property="og:url" content="https://shngmsw.github.io/workspace-image-hub/" />
+    <meta property="og:image" content="https://shngmsw.github.io/workspace-image-hub/assets/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Instrument+Sans:wght@400..700&family=Instrument+Serif:ital@0;1&display=swap"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script src="assets/site.js"></script>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-github" viewBox="0 0 16 16">
+        <path
+          fill="currentColor"
+          stroke="none"
+          d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"
+        />
+      </symbol>
+      <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 4.5v15m0 0-5.5-5.5m5.5 5.5 5.5-5.5" /></symbol>
+      <symbol id="i-arrow-out" viewBox="0 0 24 24"><path d="M8 16 17 7m0 0H9.5M17 7v7.5" /></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2" /><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 3.5v-3.5h-1a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z" /><path d="M8 10h8M8 13h5" /></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z" /><path d="m9 12 2.2 2.2L15.5 10" /></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></symbol>
+      <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M4 4l5.5 5.5M9.5 5v4.5H5M20 20l-5.5-5.5M14.5 19v-4.5H19" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13" /></symbol>
+      <symbol id="i-nodb" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5" /><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5M3.5 3.5l17 17" /></symbol>
+      <symbol id="i-disk" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="2" /><path d="M5 13 7.5 5h9L19 13M7 16.5h.01M10 16.5h.01" /></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z" /></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5" /></symbol>
+    </svg>
+
+    <a class="skip" href="#main"><span data-lang="ja" lang="ja">本文へ移動</span><span data-lang="en" lang="en">Skip to content</span></a>
+
+    <header class="site-header">
+      <div class="wrap bar">
+        <a class="brand" href="#top">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="3.5" y="6.5" width="25" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M8 10.5h1.5M8 21.5h1.5M22.5 10.5H24M22.5 21.5H24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <circle cx="16" cy="16" r="4" fill="var(--accent)" />
+          </svg>
+          <span class="brand-name">Workspace Image Hub</span>
+        </a>
+        <nav class="nav" aria-label="ページ内" data-aria-ja="ページ内" data-aria-en="On this page">
+          <a href="#why"><span data-lang="ja" lang="ja">課題</span><span data-lang="en" lang="en">Why</span></a>
+          <a href="#how"><span data-lang="ja" lang="ja">使い方</span><span data-lang="en" lang="en">How it works</span></a>
+          <a href="#features"><span data-lang="ja" lang="ja">機能</span><span data-lang="en" lang="en">Features</span></a>
+          <a href="#start"><span data-lang="ja" lang="ja">導入</span><span data-lang="en" lang="en">Get started</span></a>
+        </nav>
+        <div class="bar-end">
+          <div class="lang-toggle" role="group" aria-label="言語" data-aria-ja="言語" data-aria-en="Language">
+            <button type="button" lang="ja" data-set-lang="ja" aria-pressed="true">日本語</button>
+            <button type="button" lang="en" data-set-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <a
+            class="icon-link"
+            href="https://github.com/shngmsw/workspace-image-hub"
+            aria-label="GitHub リポジトリ"
+            data-aria-ja="GitHub リポジトリ"
+            data-aria-en="GitHub repository"
+          >
+            <svg class="icon" aria-hidden="true"><use href="#i-github" /></svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="wrap">
+          <p class="eyebrow hero-eyebrow">Self-hosted · Google Workspace · WebP</p>
+          <h1 id="hero-title" class="hero-title">
+            <span data-lang="ja" lang="ja">ドライブの画像を、<em>変わらない</em>直リンクに。</span>
+            <span data-lang="en" lang="en">Images from Drive, as direct links that <em>never change</em>.</span>
+          </h1>
+          <p class="hero-lead" data-lang="ja" lang="ja">
+            Google&nbsp;ドライブやローカルの画像を一度だけ WebP に変換し、Google&nbsp;Chat・GitHub・Notion にそのまま貼れる直リンクを返します。Google&nbsp;Workspace
+            の組織が自分たちで動かす、オープンソースのアプリです。
+          </p>
+          <p class="hero-lead" data-lang="en" lang="en">
+            Workspace Image Hub converts an image from Google&nbsp;Drive or your computer to WebP once and hands back a permanent direct link for
+            Google&nbsp;Chat, GitHub, or Notion. It is open source, and your Google&nbsp;Workspace organization runs it itself.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/shngmsw/workspace-image-hub">
+              <svg class="icon" aria-hidden="true"><use href="#i-github" /></svg>
+              <span data-lang="ja" lang="ja">GitHub で見る</span><span data-lang="en" lang="en">View on GitHub</span>
+            </a>
+            <a class="btn btn-ghost" href="#start">
+              <span data-lang="ja" lang="ja">導入手順へ</span><span data-lang="en" lang="en">Set it up</span>
+              <svg class="icon" aria-hidden="true"><use href="#i-arrow-down" /></svg>
+            </a>
+          </div>
+          <ul class="hero-facts">
+            <li><span data-lang="ja" lang="ja">MIT ライセンス</span><span data-lang="en" lang="en">MIT license</span></li>
+            <li><span data-lang="ja" lang="ja">Docker イメージ 1 つ（amd64 / arm64）</span><span data-lang="en" lang="en">One Docker image (amd64 / arm64)</span></li>
+            <li><span data-lang="ja" lang="ja">画面は日本語と英語</span><span data-lang="en" lang="en">Japanese and English UI</span></li>
+          </ul>
+
+          <figure class="stage">
+            <div class="print crop">
+              <picture data-lang="ja" lang="ja">
+                <source srcset="assets/app-dashboard-ja-dark.webp" media="(prefers-color-scheme: dark)" />
+                <img
+                  src="assets/app-dashboard-ja-light.webp"
+                  width="1920"
+                  height="1770"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Workspace Image Hub のダッシュボード。上から、画像のドロップ枠と「Google ドライブから取り込む」ボタン、アップロード結果の行（5.5 MB → 25 KB、99% 削減）、検索欄とタグの絞り込みが付いたライブラリ、URL と Markdown のコピーボタンが付いた画像カード。"
+                />
+              </picture>
+              <picture data-lang="en" lang="en">
+                <source srcset="assets/app-dashboard-en-dark.webp" media="(prefers-color-scheme: dark)" />
+                <img
+                  src="assets/app-dashboard-en-light.webp"
+                  width="1920"
+                  height="1770"
+                  loading="lazy"
+                  decoding="async"
+                  alt="The Workspace Image Hub dashboard. From the top: the drop zone with an “Import from Google Drive” button, an upload result row (5.5 MB → 25 KB, 99% smaller), the library with search and tag filters, and image cards with URL and Markdown copy buttons."
+                />
+              </picture>
+            </div>
+            <div class="phone">
+              <picture data-lang="ja" lang="ja">
+                <source srcset="assets/app-phone-ja-dark.webp" media="(prefers-color-scheme: dark)" />
+                <img
+                  src="assets/app-phone-ja-light.webp"
+                  width="780"
+                  height="1688"
+                  loading="lazy"
+                  decoding="async"
+                  alt="スマートフォン幅で表示したライブラリ。検索欄、タグの絞り込み、コピーボタン付きの画像カード。"
+                />
+              </picture>
+              <picture data-lang="en" lang="en">
+                <source srcset="assets/app-phone-en-dark.webp" media="(prefers-color-scheme: dark)" />
+                <img
+                  src="assets/app-phone-en-light.webp"
+                  width="780"
+                  height="1688"
+                  loading="lazy"
+                  decoding="async"
+                  alt="The library at phone width: search, tag filters, and an image card with copy buttons."
+                />
+              </picture>
+            </div>
+            <figcaption class="caption">
+              <span class="fig">Fig. 1</span>
+              <span data-lang="ja" lang="ja">ダッシュボードとスマートフォン表示。画像は開発用のサンプルです。</span>
+              <span data-lang="en" lang="en">The dashboard, and the same library at phone width. The images are samples.</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section" id="why" aria-labelledby="why-title">
+        <div class="wrap split">
+          <header class="sec-head">
+            <p class="eyebrow"><span class="sec-no">§ 01</span> Why</p>
+            <h2 id="why-title">
+              <span data-lang="ja" lang="ja">ドライブは、画像の置き場に向いていない。</span>
+              <span data-lang="en" lang="en">Google Drive is a poor image host.</span>
+            </h2>
+            <p class="sec-lead" data-lang="ja" lang="ja">チャットのアバターや Issue の画像にドライブのリンクを使うと、たいていどれかにぶつかります。</p>
+            <p class="sec-lead" data-lang="en" lang="en">Use a Drive link as a Chat avatar or an image in an issue, and you run into one of these.</p>
+          </header>
+
+          <div class="why-body">
+            <ol class="defects">
+              <li class="defect">
+                <p class="specimen">
+                  <s>drive.google.com/file/d/…/view</s>
+                  <span class="verdict">text/html</span>
+                </p>
+                <h3><span data-lang="ja" lang="ja">共有リンクは画像ではない</span><span data-lang="en" lang="en">A share link is not an image</span></h3>
+                <p data-lang="ja" lang="ja">開くと出てくるのは HTML のページで、画像そのものは返ってきません。</p>
+                <p data-lang="en" lang="en">It opens an HTML page, not the image itself.</p>
+              </li>
+              <li class="defect">
+                <p class="specimen">
+                  <s>drive.google.com/uc?export=view&amp;id=…</s>
+                  <span class="verdict"><span data-lang="ja" lang="ja">不安定</span><span data-lang="en" lang="en">fragile</span></span>
+                </p>
+                <h3><span data-lang="ja" lang="ja">裏技の URL は壊れる</span><span data-lang="en" lang="en">The workaround breaks</span></h3>
+                <p data-lang="ja" lang="ja"><code>uc?export=view</code> で画像を直接取る方法は、Google 側の変更でたびたび使えなくなります。</p>
+                <p data-lang="en" lang="en">The <code>uc?export=view</code> trick stops working whenever Google changes it.</p>
+              </li>
+              <li class="defect">
+                <p class="specimen">
+                  <s>drive.google.com/drive/folders/…</s>
+                  <span class="verdict"><span data-lang="ja" lang="ja">全ファイル公開</span><span data-lang="en" lang="en">every file public</span></span>
+                </p>
+                <h3><span data-lang="ja" lang="ja">フォルダの公開は漏れる</span><span data-lang="en" lang="en">A public folder leaks</span></h3>
+                <p data-lang="ja" lang="ja">アバター 1 枚のためにフォルダを公開すると、同じフォルダの他のファイルまで見えてしまいます。</p>
+                <p data-lang="en" lang="en">Make a folder public for one avatar URL, and every other file in that folder is exposed with it.</p>
+              </li>
+            </ol>
+
+            <div class="remedy">
+              <p class="specimen specimen-ok">
+                <span class="url">img.example.com/i/7k2m9q4xw1hc8d3v.webp</span>
+                <span class="verdict">image/webp</span>
+              </p>
+              <h3><span data-lang="ja" lang="ja">公開されるのは WebP だけ</span><span data-lang="en" lang="en">Only the WebP is public</span></h3>
+              <p data-lang="ja" lang="ja">
+                元のファイル、登録した人のアドレス、ファイル名、タグは外に出ません。ID は 80 ビットの乱数から作る 16 文字なので、推測も一覧もできません。
+              </p>
+              <p data-lang="en" lang="en">
+                The original file, the uploader’s address, the file name, and the tags stay private. The id is 16 characters from 80 random bits, so
+                links cannot be guessed or listed.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="how" aria-labelledby="how-title">
+        <div class="wrap">
+          <header class="sec-head sec-head-wide">
+            <p class="eyebrow"><span class="sec-no">§ 02</span> How it works</p>
+            <h2 id="how-title">
+              <span data-lang="ja" lang="ja">入れる、変換される、貼る。</span>
+              <span data-lang="en" lang="en">Drop it in. Copy the link. Paste.</span>
+            </h2>
+          </header>
+
+          <ol class="steps">
+            <li class="step">
+              <div class="step-text">
+                <span class="step-no" aria-hidden="true">1</span>
+                <h3><span data-lang="ja" lang="ja">画像を入れる</span><span data-lang="en" lang="en">Bring an image</span></h3>
+                <p data-lang="ja" lang="ja">
+                  ドラッグ＆ドロップ、ファイル選択、クリップボードからの貼り付け、Google ドライブのピッカー（複数選択・共有ドライブ対応）の 4 通り。JPEG、PNG、WebP、GIF、AVIF、TIFF を受け付けます。
+                </p>
+                <p data-lang="en" lang="en">
+                  Drag and drop, choose a file, paste from the clipboard, or pick from Google Drive (multi-select and shared drives work). JPEG, PNG,
+                  WebP, GIF, AVIF, and TIFF are accepted.
+                </p>
+                <p class="note" data-lang="ja" lang="ja">
+                  ドライブのファイルはブラウザがダウンロードしてからアップロードするので、サーバーはドライブのトークンを持ちません。ドライブのボタンは
+                  <code>GOOGLE_PICKER_API_KEY</code> を設定したときに表示されます。
+                </p>
+                <p class="note" data-lang="en" lang="en">
+                  The browser downloads a Drive file and uploads it like a local one, so the server never holds a Drive token. The Drive button appears
+                  once <code>GOOGLE_PICKER_API_KEY</code> is set.
+                </p>
+              </div>
+              <figure class="shot crop">
+                <picture data-lang="ja" lang="ja">
+                  <source srcset="assets/app-intake-ja-dark.webp" media="(prefers-color-scheme: dark)" />
+                  <img
+                    class="shot-intake"
+                    src="assets/app-intake-ja-light.webp"
+                    width="1088"
+                    height="694"
+                    loading="lazy"
+                    decoding="async"
+                    alt="ドロップ枠。「画像をここにドロップ、または ファイルを選択」、貼り付けにも対応という案内、「Google ドライブから取り込む」ボタン、アップロード時に付けるタグの入力欄。"
+                  />
+                </picture>
+                <picture data-lang="en" lang="en">
+                  <source srcset="assets/app-intake-en-dark.webp" media="(prefers-color-scheme: dark)" />
+                  <img
+                    class="shot-intake"
+                    src="assets/app-intake-en-light.webp"
+                    width="1088"
+                    height="688"
+                    loading="lazy"
+                    decoding="async"
+                    alt="The drop zone: “Drop images here, or choose files”, a note that pasting works too, an “Import from Google Drive” button, and a field for tags on new uploads."
+                  />
+                </picture>
+              </figure>
+            </li>
+
+            <li class="step">
+              <div class="step-text">
+                <span class="step-no" aria-hidden="true">2</span>
+                <h3><span data-lang="ja" lang="ja">一度だけ WebP に変換</span><span data-lang="en" lang="en">Converted to WebP, once</span></h3>
+                <p data-lang="ja" lang="ja">
+                  長辺は 1024px に収め（拡大はしません）、画質は 80。アニメーション GIF はアニメーションのまま変換し、EXIF は出力に残しません。カードには変換前後のサイズが出ます。
+                </p>
+                <p data-lang="en" lang="en">
+                  The long edge is capped at 1024 px (never enlarged) at quality 80. Animated GIFs stay animated, and EXIF data is dropped. Each card
+                  shows the size before and after.
+                </p>
+                <p class="note" data-lang="ja" lang="ja">
+                  上限と画質は <code>IMAGE_MAX_DIMENSION</code> と <code>WEBP_QUALITY</code> で変えられます。
+                </p>
+                <p class="note" data-lang="en" lang="en">
+                  Change the cap and quality with <code>IMAGE_MAX_DIMENSION</code> and <code>WEBP_QUALITY</code>.
+                </p>
+              </div>
+              <figure class="shot crop">
+                <picture data-lang="ja" lang="ja">
+                  <source srcset="assets/app-card-ja-dark.webp" media="(prefers-color-scheme: dark)" />
+                  <img
+                    class="shot-card"
+                    src="assets/app-card-ja-light.webp"
+                    width="746"
+                    height="930"
+                    loading="lazy"
+                    decoding="async"
+                    alt="ライブラリの画像カード。3200×2000 → 1024×640、25 KB（−99%）、タグは Notion と docs、URL と Markdown のコピーボタン。"
+                  />
+                </picture>
+                <picture data-lang="en" lang="en">
+                  <source srcset="assets/app-card-en-dark.webp" media="(prefers-color-scheme: dark)" />
+                  <img
+                    class="shot-card"
+                    src="assets/app-card-en-light.webp"
+                    width="746"
+                    height="930"
+                    loading="lazy"
+                    decoding="async"
+                    alt="A library card: 3200×2000 → 1024×640, 25 KB (−99%), tags Notion and docs, and URL and Markdown copy buttons."
+                  />
+                </picture>
+              </figure>
+            </li>
+
+            <li class="step">
+              <div class="step-text">
+                <span class="step-no" aria-hidden="true">3</span>
+                <h3><span data-lang="ja" lang="ja">コピーして貼る</span><span data-lang="en" lang="en">Copy and paste</span></h3>
+                <p data-lang="ja" lang="ja">
+                  URL そのままか、Markdown の <code>![ファイル名](URL)</code> をコピーします。リンクは
+                  <code>Cache-Control: immutable</code> 付きで配信され、あとから変わりません。
+                </p>
+                <p data-lang="en" lang="en">
+                  Copy the plain URL, or Markdown as <code>![file name](url)</code>. Links are served with <code>Cache-Control: immutable</code> and
+                  never change.
+                </p>
+              </div>
+              <figure class="shot crop">
+                <picture data-lang="ja" lang="ja">
+                  <source srcset="assets/app-upload-ja-dark.webp" media="(prefers-color-scheme: dark)" />
+                  <img
+                    class="shot-upload"
+                    src="assets/app-upload-ja-light.webp"
+                    width="1088"
+                    height="268"
+                    loading="lazy"
+                    decoding="async"
+                    alt="アップロード結果の行。onboarding-cover.png が 5.5 MB から 25 KB（99% 削減）になり、URL ボタンが「コピー済み」になっている。"
+                  />
+                </picture>
+                <picture data-lang="en" lang="en">
+                  <source srcset="assets/app-upload-en-dark.webp" media="(prefers-color-scheme: dark)" />
+                  <img
+                    class="shot-upload"
+                    src="assets/app-upload-en-light.webp"
+                    width="1088"
+                    height="268"
+                    loading="lazy"
+                    decoding="async"
+                    alt="An upload result row: onboarding-cover.png went from 5.5 MB to 25 KB (99% smaller), and the URL button reads “Copied”."
+                  />
+                </picture>
+                <p class="pasted" aria-hidden="true"><span class="pasted-tag">md</span>![onboarding-cover.png](https://img.example.com/i/7k2m9q4xw1hc8d3v.webp)</p>
+              </figure>
+            </li>
+          </ol>
+
+          <aside class="chat-note" aria-labelledby="chat-title">
+            <svg class="icon chat-icon" aria-hidden="true"><use href="#i-chat" /></svg>
+            <div>
+              <h3 id="chat-title">
+                <span data-lang="ja" lang="ja">Google Chat の Webhook に使うとき</span><span data-lang="en" lang="en">Using it with a Google Chat webhook</span>
+              </h3>
+              <p data-lang="ja" lang="ja">
+                Webhook の設定にある「アバター URL」の欄に、コピーした URL をそのまま貼り付けます。この欄は URL しか受け取りません。
+                <a class="inline-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.ja.md#google-chat-で使うとき">README の説明</a>
+              </p>
+              <p data-lang="en" lang="en">
+                Paste the copied URL into the <strong>Avatar URL</strong> field in the webhook’s settings. The field takes a plain URL.
+                <a class="inline-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.md#use-with-google-chat">Read more in the README</a>
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="wrap">
+          <header class="sec-head sec-head-wide">
+            <p class="eyebrow"><span class="sec-no">§ 03</span> Features</p>
+            <h2 id="features-title">
+              <span data-lang="ja" lang="ja">ひとつの組織で使うための作り。</span>
+              <span data-lang="en" lang="en">Built for one Workspace organization.</span>
+            </h2>
+          </header>
+
+          <ul class="features">
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg>
+              <h3><span data-lang="ja" lang="ja">ログインは許可したドメインだけ</span><span data-lang="en" lang="en">Sign-in limited to your domains</span></h3>
+              <p data-lang="ja" lang="ja">
+                「Google でログイン」で、<code>ALLOWED_DOMAINS</code> の Workspace アカウントと <code>ALLOWED_EMAILS</code> のアドレスだけを通します。ID トークンはサーバーが検証します。
+              </p>
+              <p data-lang="en" lang="en">
+                Sign in with Google admits Workspace accounts from <code>ALLOWED_DOMAINS</code> and addresses in <code>ALLOWED_EMAILS</code>. The
+                server verifies the ID token.
+              </p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
+              <h3><span data-lang="ja" lang="ja">タグと検索のライブラリ</span><span data-lang="en" lang="en">A library with tags and search</span></h3>
+              <p data-lang="ja" lang="ja">
+                全画像を新しい順に並べます。ファイル名・タグ・登録者・ID で検索でき、大文字と小文字、ひらがなとカタカナの違いは無視します。
+              </p>
+              <p data-lang="en" lang="en">
+                Every image, newest first. Search file names, tags, uploaders, and ids, ignoring case and treating hiragana and katakana alike.
+              </p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-shrink" /></svg>
+              <h3><span data-lang="ja" lang="ja">変換前後のサイズ</span><span data-lang="en" lang="en">Size before and after</span></h3>
+              <p data-lang="ja" lang="ja">カードごとに元のサイズと変換後のサイズ、縦横のピクセル数を表示します。</p>
+              <p data-lang="en" lang="en">Every card shows the original and converted size, and the pixel dimensions.</p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-trash" /></svg>
+              <h3><span data-lang="ja" lang="ja">削除は本人か管理者</span><span data-lang="en" lang="en">Delete by owner or admin</span></h3>
+              <p data-lang="ja" lang="ja">
+                消せるのは登録した本人と <code>ADMIN_EMAILS</code> の人だけ。キャッシュ済みのコピーまでは回収できないことも、確認ダイアログで伝えます。
+              </p>
+              <p data-lang="en" lang="en">
+                Only the uploader or someone in <code>ADMIN_EMAILS</code> can delete. The confirmation says that cached copies may keep showing for a
+                while.
+              </p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-nodb" /></svg>
+              <h3><span data-lang="ja" lang="ja">データベースなし</span><span data-lang="en" lang="en">No database</span></h3>
+              <p data-lang="ja" lang="ja">
+                画像と記録（登録者、元のファイル名、タグ）はファイルかオブジェクトとして置くだけ。ローカルならボリュームをコピーすればバックアップです。
+              </p>
+              <p data-lang="en" lang="en">
+                Images and records (uploader, original name, tags) are plain files or objects. On local disk, copying the volume is the backup.
+              </p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-disk" /></svg>
+              <h3><span data-lang="ja" lang="ja">ローカルディスクか Cloud Storage</span><span data-lang="en" lang="en">Local disk or Cloud Storage</span></h3>
+              <p data-lang="ja" lang="ja">
+                保存先は Docker ボリュームか Cloud Storage。公開バケットを使う構成なら、アプリが止まっていても画像は表示されます。
+              </p>
+              <p data-lang="en" lang="en">
+                Store images on a Docker volume or in Cloud Storage. With a public bucket, links keep working while the app is down.
+              </p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-sliders" /></svg>
+              <h3><span data-lang="ja" lang="ja">設定は環境変数だけ</span><span data-lang="en" lang="en">Environment variables only</span></h3>
+              <p data-lang="ja" lang="ja">
+                どの組織でも同じビルド済み Docker イメージを使います。設定に誤りがあれば、起動時に問題を全部並べて終了します。
+              </p>
+              <p data-lang="en" lang="en">
+                Every organization runs the same prebuilt Docker image. A bad value stops startup with every problem listed at once.
+              </p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-globe" /></svg>
+              <h3><span data-lang="ja" lang="ja">日本語と英語の画面</span><span data-lang="en" lang="en">Japanese and English UI</span></h3>
+              <p data-lang="ja" lang="ja">
+                <code>APP_LOCALE</code> で固定するか、利用者の切り替えとブラウザの言語に任せます。
+              </p>
+              <p data-lang="en" lang="en">Pin one with <code>APP_LOCALE</code>, or let each user’s toggle and browser language decide.</p>
+            </li>
+            <li class="feature">
+              <svg class="icon" aria-hidden="true"><use href="#i-code" /></svg>
+              <h3><span data-lang="ja" lang="ja">MIT ライセンス</span><span data-lang="en" lang="en">MIT license</span></h3>
+              <p data-lang="ja" lang="ja">ソースコードはすべて GitHub で公開しています。</p>
+              <p data-lang="en" lang="en">All of the source code is on GitHub.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="start" aria-labelledby="start-title">
+        <div class="wrap">
+          <header class="sec-head sec-head-wide">
+            <p class="eyebrow"><span class="sec-no">§ 04</span> Get started</p>
+            <h2 id="start-title">
+              <span data-lang="ja" lang="ja">動かし方は 2 通り。</span>
+              <span data-lang="en" lang="en">Two ways to run it.</span>
+            </h2>
+            <p class="sec-lead" data-lang="ja" lang="ja">
+              どちらも同じ Docker イメージです。先に Google Cloud で、種類「ウェブ アプリケーション」の OAuth クライアント ID を作っておきます。
+              <a class="inline-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.ja.md#共通の準備-google-cloud">共通の準備</a>
+            </p>
+            <p class="sec-lead" data-lang="en" lang="en">
+              Both run the same Docker image. First, create an OAuth client id of type Web application in Google Cloud.
+              <a class="inline-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.md#common-setup-google-cloud">Common setup</a>
+            </p>
+          </header>
+
+          <div class="options">
+            <article class="option" aria-labelledby="opt-compose">
+              <p class="eyebrow"><span data-lang="ja" lang="ja">方法 1</span><span data-lang="en" lang="en">Option 1</span></p>
+              <h3 id="opt-compose">Docker Compose</h3>
+              <p class="option-sub" data-lang="ja" lang="ja">自分のサーバーや PC で動かし、画像は Docker ボリュームに保存します。まず試すならこちら。</p>
+              <p class="option-sub" data-lang="en" lang="en">Runs on your own server or PC and keeps images in a Docker volume. The quickest way to try it.</p>
+              <ol class="howto">
+                <li>
+                  <p data-lang="ja" lang="ja">OAuth クライアントの承認済みの JavaScript 生成元に <code>http://localhost:3000</code> を登録し、2 つのファイルを取得します。</p>
+                  <p data-lang="en" lang="en">Add <code>http://localhost:3000</code> to the OAuth client’s authorized JavaScript origins, then fetch two files.</p>
+                  <div class="code">
+                    <div class="code-bar">
+                      <span class="code-lang">sh</span>
+                      <button type="button" class="copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label"></span></button>
+                    </div>
+                    <pre tabindex="0"><code>mkdir image-hub &amp;&amp; cd image-hub
+curl -fsSLO https://raw.githubusercontent.com/shngmsw/workspace-image-hub/main/compose.yaml
+curl -fsSL -o .env https://raw.githubusercontent.com/shngmsw/workspace-image-hub/main/.env.example</code></pre>
+                  </div>
+                </li>
+                <li>
+                  <p data-lang="ja" lang="ja"><code>.env</code> の必須 4 項目を埋めます。<code>AUTH_SECRET</code> は <code>openssl rand -base64 32</code> で作ります。</p>
+                  <p data-lang="en" lang="en">Fill in the four required values in <code>.env</code>. Generate <code>AUTH_SECRET</code> with <code>openssl rand -base64 32</code>.</p>
+                  <div class="code">
+                    <div class="code-bar">
+                      <span class="code-lang">.env</span>
+                      <button type="button" class="copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label"></span></button>
+                    </div>
+                    <pre tabindex="0"><code><span class="k">APP_URL</span>=http://localhost:3000
+<span class="k">AUTH_SECRET</span>=&lt;openssl rand -base64 32&gt;
+<span class="k">GOOGLE_CLIENT_ID</span>=123456789012-abc123.apps.googleusercontent.com
+<span class="k">ALLOWED_DOMAINS</span>=example.com</code></pre>
+                  </div>
+                </li>
+                <li>
+                  <p data-lang="ja" lang="ja">起動して http://localhost:3000 を開き、許可したドメインの Google アカウントでログインします。</p>
+                  <p data-lang="en" lang="en">Start it, open http://localhost:3000, and sign in with a Google account on an allowed domain.</p>
+                  <div class="code">
+                    <div class="code-bar">
+                      <span class="code-lang">sh</span>
+                      <button type="button" class="copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label"></span></button>
+                    </div>
+                    <pre><code>docker compose up -d</code></pre>
+                  </div>
+                </li>
+              </ol>
+              <a class="readme-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.ja.md#方法-1-docker-composeローカルディスクに保存" data-lang="ja" lang="ja">
+                README「方法 1: Docker Compose」
+                <svg class="icon" aria-hidden="true"><use href="#i-arrow-out" /></svg>
+              </a>
+              <a class="readme-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.md#option-1-docker-compose-local-disk" data-lang="en" lang="en">
+                README: Option 1, Docker Compose
+                <svg class="icon" aria-hidden="true"><use href="#i-arrow-out" /></svg>
+              </a>
+            </article>
+
+            <article class="option" aria-labelledby="opt-run">
+              <p class="eyebrow"><span data-lang="ja" lang="ja">方法 2</span><span data-lang="en" lang="en">Option 2</span></p>
+              <h3 id="opt-run">Cloud Run</h3>
+              <p class="option-sub" data-lang="ja" lang="ja">Google Cloud で動かし、画像は Cloud Storage に保存します。サーバーを持たずに運用するならこちら。</p>
+              <p class="option-sub" data-lang="en" lang="en">Runs on Google Cloud and keeps images in Cloud Storage. For running without a server to maintain.</p>
+              <ol class="howto">
+                <li>
+                  <p data-lang="ja" lang="ja">
+                    非公開バケット（と任意の公開バケット）、サービスアカウント、<code>AUTH_SECRET</code> 用のシークレットを用意します。コマンドは README にあります。
+                  </p>
+                  <p data-lang="en" lang="en">
+                    Create a private bucket (and optionally a public one), a service account, and a secret for <code>AUTH_SECRET</code>. The README
+                    has the commands.
+                  </p>
+                </li>
+                <li>
+                  <p data-lang="ja" lang="ja">リポジトリの Dockerfile を Cloud Build でビルドしてデプロイします。</p>
+                  <p data-lang="en" lang="en">Build the repository’s Dockerfile with Cloud Build and deploy it.</p>
+                  <div class="code">
+                    <div class="code-bar">
+                      <span class="code-lang">sh</span>
+                      <button type="button" class="copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label"></span></button>
+                    </div>
+                    <pre tabindex="0"><code>git clone https://github.com/shngmsw/workspace-image-hub.git &amp;&amp; cd workspace-image-hub
+gcloud run deploy "$SERVICE" --source . --region="$REGION" --service-account="$SA" \
+  --allow-unauthenticated --memory=2Gi --concurrency=10 \
+  --set-env-vars="APP_URL=$APP_URL,STORAGE_DRIVER=gcs,GCS_BUCKET=$PROJECT_ID-hub,GCS_PUBLIC_BUCKET=$PROJECT_ID-hub-public,GOOGLE_CLIENT_ID=123456789012-abc123.apps.googleusercontent.com,ALLOWED_DOMAINS=example.com" \
+  --set-secrets="AUTH_SECRET=hub-auth-secret:latest"</code></pre>
+                  </div>
+                </li>
+                <li>
+                  <p data-lang="ja" lang="ja">組織ポリシーで <code>allUsers</code> への公開が禁止されている場合の構成も、README で説明しています。</p>
+                  <p data-lang="en" lang="en">If org policies forbid granting <code>allUsers</code>, the README covers that setup too.</p>
+                </li>
+              </ol>
+              <a class="readme-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.ja.md#方法-2-cloud-run-と-cloud-storage" data-lang="ja" lang="ja">
+                README「方法 2: Cloud Run と Cloud Storage」
+                <svg class="icon" aria-hidden="true"><use href="#i-arrow-out" /></svg>
+              </a>
+              <a class="readme-link" href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.md#option-2-cloud-run-with-cloud-storage" data-lang="en" lang="en">
+                README: Option 2, Cloud Run with Cloud Storage
+                <svg class="icon" aria-hidden="true"><use href="#i-arrow-out" /></svg>
+              </a>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap foot">
+        <div class="foot-brand">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="3.5" y="6.5" width="25" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M8 10.5h1.5M8 21.5h1.5M22.5 10.5H24M22.5 21.5H24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <circle cx="16" cy="16" r="4" fill="var(--accent)" />
+          </svg>
+          <p class="foot-name">Workspace Image Hub</p>
+          <p class="foot-license"><span data-lang="ja" lang="ja">MIT ライセンスで公開しています。</span><span data-lang="en" lang="en">Released under the MIT license.</span></p>
+        </div>
+        <nav class="foot-links" aria-label="リンク" data-aria-ja="リンク" data-aria-en="Links">
+          <a href="https://github.com/shngmsw/workspace-image-hub">GitHub</a>
+          <a href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.ja.md" lang="ja">README（日本語）</a>
+          <a href="https://github.com/shngmsw/workspace-image-hub/blob/main/README.md" lang="en">README (English)</a>
+          <a href="https://github.com/shngmsw/workspace-image-hub/blob/main/LICENSE">LICENSE</a>
+        </nav>
+        <p class="legal" data-lang="ja" lang="ja">
+          Google Workspace、Google Drive、Google Chat は Google LLC の商標です。このプロジェクトは Google とは無関係で、Google の承認や提携を受けたものではありません。
+        </p>
+        <p class="legal" data-lang="en" lang="en">
+          Google Workspace, Google Drive, and Google Chat are trademarks of Google LLC. This project is not affiliated with or endorsed by Google.
+        </p>
+      </div>
+    </footer>
+
+    <p id="live" class="sr-only" aria-live="polite"></p>
+  </body>
+</html>
