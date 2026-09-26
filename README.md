@@ -2,6 +2,8 @@
 
 [日本語版 README](README.ja.md)
 
+Project site: [shngmsw.github.io/workspace-image-hub](https://shngmsw.github.io/workspace-image-hub/?lang=en)
+
 Workspace Image Hub is a self-hosted app for one Google Workspace organization. A member drops an image, pastes one, or picks one from Google Drive. The server converts it to WebP once and returns a public direct link such as `https://img.example.com/i/7k2m9q4xw1hc8d3v.webp`. The link never changes, so it can be the avatar of a Google Chat webhook, an image in a GitHub issue or a Notion page, or the `src` of any `<img>` tag.
 
 It exists because Drive is a poor image host. A Drive sharing link opens an HTML page, not an image. The `uc?export=view` trick breaks whenever Google changes it. Making a Drive folder public to get one avatar URL exposes every other file in that folder. With the app, only the converted WebP is public. The original file, the uploader's address, the file name, and the tags stay private.

@@ -2,6 +2,8 @@
 
 [English README](README.md)
 
+紹介ページ: [shngmsw.github.io/workspace-image-hub](https://shngmsw.github.io/workspace-image-hub/)
+
 Workspace Image Hub は、Google Workspace を使う組織向けのセルフホスト型の画像置き場です。メンバーが画像をドロップするか、貼り付けるか、Google ドライブから選ぶと、サーバーが一度だけ WebP に変換して `https://img.example.com/i/7k2m9q4xw1hc8d3v.webp` のような公開直リンクを返します。リンクは変わらないので、Google Chat の Webhook のアバター、GitHub の Issue、Notion のページ、社内ポータルの `<img>` タグにそのまま貼れます。
 
 作った理由は、ドライブが画像の配信に向いていないからです。共有リンクを開くと HTML のページが出てきて、画像そのものは返ってきません。`uc?export=view` の裏技は Google 側の変更でたびたび壊れます。アバター 1 枚のためにドライブのフォルダごと公開設定にすると、同じフォルダの他のファイルまで見えてしまいます。このアプリで公開されるのは変換後の WebP だけで、元のファイル、登録した人のアドレス、ファイル名、タグは外に出ません。
