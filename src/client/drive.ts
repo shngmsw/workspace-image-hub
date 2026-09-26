@@ -65,16 +65,15 @@ export async function pickFromDrive(config: DriveBootConfig, options: PickOption
     return [];
   }
   const docs = await new Promise<readonly google.picker.PickedDoc[]>((resolve) => {
-    const view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES)
-      .setMimeTypes(options.accept)
-      .setIncludeFolders(true)
-      .setEnableDrives(true);
+    const images = () => new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES).setMimeTypes(options.accept).setIncludeFolders(true);
     new google.picker.PickerBuilder()
       .setOAuthToken(token)
       .setDeveloperKey(config.apiKey)
       .setAppId(config.appId)
       .setLocale(options.locale)
-      .addView(view)
+      .addView(images())
+      // setEnableDrives restricts a view to shared drives, so My Drive needs its own view.
+      .addView(images().setEnableDrives(true))
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
       .setCallback((data) => {
