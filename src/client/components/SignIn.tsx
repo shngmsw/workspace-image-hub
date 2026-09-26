@@ -63,7 +63,8 @@ export function SignIn({ appName, session, localeFixed }: { readonly appName: st
           <p className="mt-5 max-w-md text-[17px] leading-relaxed text-muted">{t.signIn.tagline}</p>
 
           <div className="mt-9 flex min-h-[44px] flex-col items-start gap-3">
-            <div ref={button} className={phase === "signing-in" ? "pointer-events-none opacity-40" : ""} />
+            {/* The GIS iframe document is light; a dark color-scheme on its element makes the browser paint it opaque white. */}
+            <div ref={button} style={{ colorScheme: "light" }} className={phase === "signing-in" ? "pointer-events-none opacity-40" : ""} />
             {phase === "loading" && <div className="h-[44px] w-[280px] animate-pulse rounded-full bg-well" />}
             {phase === "signing-in" && <p className="font-mono text-xs text-muted">{t.signIn.signingIn}</p>}
             {phase === "unavailable" && <p className="max-w-sm text-sm text-danger">{t.signIn.unavailable}</p>}
