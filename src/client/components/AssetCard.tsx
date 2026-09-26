@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 
 import type { AssetView } from "../../shared/domain";
 import { parseTags, tagKey } from "../../shared/domain";
-import { formatBytes, formatDimensions } from "../../shared/i18n";
+import { formatBytes, formatDimensions, savedPercent } from "../../shared/i18n";
 import { useI18n } from "../i18n";
 import { splitTags } from "../tags";
 import { CopyButtons } from "./CopyButtons";
@@ -24,7 +24,7 @@ export function AssetCard({ asset, index, activeTagKeys, onToggleTag, onSaveTags
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const inputId = useId();
-  const saved = asset.originalBytes === 0 ? 0 : Math.round((1 - asset.storedBytes / asset.originalBytes) * 100);
+  const saved = savedPercent(asset.originalBytes, asset.storedBytes);
 
   const save = () => {
     const tags = splitTags(draft);

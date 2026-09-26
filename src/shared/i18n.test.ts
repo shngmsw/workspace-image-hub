@@ -21,6 +21,7 @@ describe("sizes", () => {
     expect(formatSizeChange(3_500_000, 210_000, "en")).toBe("3.5 MB → 210 KB (94% smaller)");
     expect(formatSizeChange(3_500_000, 210_000, "ja")).toBe("3.5 MB → 210 KB（94% 削減）");
     expect(formatSizeChange(1_000, 1_500, "en")).toBe("1 KB → 1.5 KB (50% larger)");
+    expect(formatSizeChange(2_896_356, 10_194, "ja")).toBe("2.9 MB → 10 KB（99% 削減）");
   });
 
   it("shows the pixel size before and after conversion, or one size when there is nothing to compare", () => {

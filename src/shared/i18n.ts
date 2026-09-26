@@ -287,14 +287,16 @@ export function formatBytes(bytes: number, locale: Locale): string {
   return `${number} ${units[unit] ?? "B"}`;
 }
 
+// Rounded down so a large saving never reads as 100% while bytes remain.
+export function savedPercent(originalBytes: number, storedBytes: number): number {
+  return originalBytes === 0 ? 0 : Math.floor(((originalBytes - storedBytes) * 100) / originalBytes);
+}
+
 export function formatSizeChange(originalBytes: number, storedBytes: number, locale: Locale): string {
   const m = messages[locale].upload;
   const from = formatBytes(originalBytes, locale);
   const to = formatBytes(storedBytes, locale);
-  if (storedBytes <= originalBytes || originalBytes === 0) {
-    const percent = originalBytes === 0 ? 0 : Math.round((1 - storedBytes / originalBytes) * 100);
-    return m.reduction(from, to, percent);
-  }
+  if (storedBytes <= originalBytes || originalBytes === 0) return m.reduction(from, to, savedPercent(originalBytes, storedBytes));
   return m.grew(from, to, Math.round((storedBytes / originalBytes - 1) * 100));
 }
 
