@@ -11,6 +11,7 @@ describe("transcoder", () => {
     const png = await photoPng(3000, 2000);
     const out = await transcode(png);
     expect([out.width, out.height]).toEqual([1024, 683]);
+    expect(out.originalSize).toEqual({ width: 3000, height: 2000 });
     expect(out.inputFormat).toBe("png");
     expect(out.frames).toBe(1);
     expect(out.webp.byteLength).toBeLessThan(png.byteLength);
@@ -21,11 +22,13 @@ describe("transcoder", () => {
   it("never enlarges a small image", async () => {
     const out = await transcode(await solidPng(200, 100));
     expect([out.width, out.height]).toEqual([200, 100]);
+    expect(out.originalSize).toEqual({ width: 200, height: 100 });
   });
 
   it("applies EXIF orientation 6, which swaps width and height, then drops the EXIF", async () => {
     const out = await transcode(await orientedJpeg(300, 100, 6));
     expect([out.width, out.height]).toEqual([100, 300]);
+    expect(out.originalSize).toEqual({ width: 100, height: 300 });
     const meta = await sharp(out.webp).metadata();
     expect(meta.exif).toBeUndefined();
     expect(meta.orientation).toBeUndefined();
@@ -35,6 +38,7 @@ describe("transcoder", () => {
     const out = await transcode(await animatedGif(1600, 400, 4));
     expect(out.frames).toBe(4);
     expect([out.width, out.height]).toEqual([1024, 256]);
+    expect(out.originalSize).toEqual({ width: 1600, height: 400 });
     const meta = await sharp(out.webp).metadata();
     expect(meta.format).toBe("webp");
     expect(meta.pages).toBe(4);

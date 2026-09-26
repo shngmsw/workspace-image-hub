@@ -1,5 +1,5 @@
 import type { AuthErrorCode, ClientErrorCode, ErrorCode } from "./api";
-import type { InputIssue } from "./domain";
+import type { AssetView, InputIssue } from "./domain";
 import { TAG_MAX_CHARS, TAGS_MAX } from "./domain";
 import type { SnippetKind } from "./snippets";
 
@@ -296,4 +296,11 @@ export function formatSizeChange(originalBytes: number, storedBytes: number, loc
     return m.reduction(from, to, percent);
   }
   return m.grew(from, to, Math.round((storedBytes / originalBytes - 1) * 100));
+}
+
+export function formatDimensions(asset: Pick<AssetView, "width" | "height" | "originalSize">): string {
+  const stored = `${asset.width}×${asset.height}`;
+  const original = asset.originalSize;
+  if (original === null || (original.width === asset.width && original.height === asset.height)) return stored;
+  return `${original.width}×${original.height} → ${stored}`;
 }

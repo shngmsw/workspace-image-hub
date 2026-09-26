@@ -47,6 +47,7 @@ function worstCaseRecord(char: string): AssetRecord {
     source: "upload",
     width: Number.MAX_SAFE_INTEGER,
     height: Number.MAX_SAFE_INTEGER,
+    originalSize: { width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER },
     frames: Number.MAX_SAFE_INTEGER,
     originalBytes: Number.MAX_SAFE_INTEGER,
     storedBytes: Number.MAX_SAFE_INTEGER,

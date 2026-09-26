@@ -1,6 +1,7 @@
 import sharp, { type Metadata } from "sharp";
 
 import { TRANSCODE_CONCURRENCY } from "../shared/api";
+import type { PixelSize } from "../shared/domain";
 import { HubError } from "./errors";
 
 // The server never re-reads the same input; the libvips operation cache would only hold memory.
@@ -27,6 +28,7 @@ export interface Transcoded {
   readonly webp: Uint8Array;
   readonly width: number;
   readonly height: number;
+  readonly originalSize: PixelSize;
   readonly frames: number;
   readonly inputFormat: InputFormat;
 }
@@ -57,6 +59,10 @@ async function transcode(input: Uint8Array, policy: TranscodePolicy): Promise<Tr
   if (meta.width * frameHeight * (animated ? frames : 1) > policy.maxInputPixels) {
     throw new HubError("too_many_pixels", { maxPixels: policy.maxInputPixels });
   }
+  // Animated input is not auto-oriented below, so its original size must not be either.
+  const originalSize = animated
+    ? { width: meta.width, height: frameHeight }
+    : { width: meta.autoOrient.width, height: meta.autoOrient.height };
 
   try {
     const { data, info } = await sharp(input, {
@@ -72,6 +78,7 @@ async function transcode(input: Uint8Array, policy: TranscodePolicy): Promise<Tr
       webp: new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
       width: info.width,
       height: info.pageHeight ?? info.height,
+      originalSize,
       frames: animated ? frames : 1,
       inputFormat,
     };

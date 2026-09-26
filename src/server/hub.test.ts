@@ -61,6 +61,9 @@ describe("hub.ingest", () => {
 
     expect(view.originalBytes).toBe(png.byteLength);
     expect(view.storedBytes).toBeLessThan(view.originalBytes);
+    expect([view.width, view.height]).toEqual([1024, 683]);
+    expect(view.originalSize).toEqual({ width: 3000, height: 2000 });
+    expect((await hub.list(alice)).map((a) => a.originalSize)).toEqual([{ width: 3000, height: 2000 }]);
     expect(view.source).toBe("drive");
     expect(view.tags).toEqual(["ChatIcon"]);
     const image = await store.openImage(view.id);

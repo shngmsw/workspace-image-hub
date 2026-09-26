@@ -75,6 +75,7 @@ export function createHub(deps: HubDeps): Hub {
         source: input.source,
         width: out.width,
         height: out.height,
+        originalSize: out.originalSize,
         frames: out.frames,
         originalBytes: input.bytes.byteLength,
         storedBytes: out.webp.byteLength,

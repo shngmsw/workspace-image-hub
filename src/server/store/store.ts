@@ -8,6 +8,7 @@ import {
   parseIsoTimestamp,
   parseSource,
   parseTags,
+  type PixelSize,
 } from "../../shared/domain";
 
 export interface AssetStore {
@@ -67,6 +68,7 @@ export function encodeRecord(record: AssetRecord): string {
     source: record.source,
     width: record.width,
     height: record.height,
+    originalSize: record.originalSize === null ? null : { width: record.originalSize.width, height: record.originalSize.height },
     frames: record.frames,
     originalBytes: record.originalBytes,
     storedBytes: record.storedBytes,
@@ -85,7 +87,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
     return null;
   }
   if (!isObject(json) || json["v"] !== 1) return null;
-  const { id, tags, originalName, source, width, height, frames, originalBytes, storedBytes, uploadedBy, createdAt, updatedAt } = json;
+  const { id, tags, originalName, source, width, height, originalSize, frames, originalBytes, storedBytes, uploadedBy, createdAt, updatedAt } = json;
 
   const parsedId = typeof id === "string" ? parseAssetId(id) : null;
   const parsedTags = Array.isArray(tags) && tags.every((t) => typeof t === "string") ? parseTags(tags) : null;
@@ -94,6 +96,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
   const email = typeof by["email"] === "string" ? parseEmail(by["email"]) : null;
   const created = typeof createdAt === "string" ? parseIsoTimestamp(createdAt) : null;
   const updated = typeof updatedAt === "string" ? parseIsoTimestamp(updatedAt) : null;
+  const parsedOriginalSize = decodeOriginalSize(originalSize);
 
   if (
     parsedId?.ok !== true ||
@@ -106,6 +109,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
     updated === null ||
     !isCount(width, 1) ||
     !isCount(height, 1) ||
+    parsedOriginalSize === false ||
     !isCount(frames, 1) ||
     !isCount(originalBytes, 0) ||
     !isCount(storedBytes, 0)
@@ -120,6 +124,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
     source: parsedSource.value,
     width,
     height,
+    originalSize: parsedOriginalSize,
     frames,
     originalBytes,
     storedBytes,
@@ -127,6 +132,14 @@ export function decodeRecord(raw: string): AssetRecord | null {
     createdAt: created,
     updatedAt: updated,
   };
+}
+
+/** `false` when present but invalid. Absent in records stored before the field existed; `null` once such a record is rewritten. */
+function decodeOriginalSize(value: unknown): PixelSize | null | false {
+  if (value === undefined || value === null) return null;
+  if (!isObject(value)) return false;
+  const { width, height } = value;
+  return isCount(width, 1) && isCount(height, 1) ? { width, height } : false;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

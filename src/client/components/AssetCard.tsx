@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 
 import type { AssetView } from "../../shared/domain";
 import { parseTags, tagKey } from "../../shared/domain";
-import { formatBytes } from "../../shared/i18n";
+import { formatBytes, formatDimensions } from "../../shared/i18n";
 import { useI18n } from "../i18n";
 import { splitTags } from "../tags";
 import { CopyButtons } from "./CopyButtons";
@@ -56,8 +56,8 @@ export function AssetCard({ asset, index, activeTagKeys, onToggleTag, onSaveTags
           height={asset.height}
           className="absolute inset-0 size-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.02]"
         />
-        <span className="absolute bottom-2 left-2.5 rounded-full bg-paper/85 px-2 py-0.5 font-mono text-[10px] text-muted backdrop-blur-sm">
-          {asset.width}×{asset.height}
+        <span className="absolute bottom-2 left-2.5 whitespace-nowrap rounded-full bg-paper/85 px-2 py-0.5 font-mono text-[10px] text-muted backdrop-blur-sm">
+          {formatDimensions(asset)}
         </span>
         <span className="absolute right-2 top-2 flex gap-1">
           {asset.animated && <Badge>{t.assets.animated}</Badge>}

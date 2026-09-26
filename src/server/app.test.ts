@@ -66,6 +66,7 @@ describe("HTTP shell", () => {
     expect(res.status).toBe(201);
     const asset = (await res.json()) as AssetView;
     expect([asset.width, asset.height]).toEqual([1024, 683]);
+    expect(asset.originalSize).toEqual({ width: 1500, height: 1000 });
     expect(asset.storedBytes).toBeLessThan(asset.originalBytes);
     expect(asset.url).toBe(`${ORIGIN}/i/${asset.id}.webp`);
 

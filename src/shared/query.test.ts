@@ -13,6 +13,7 @@ function asset(id: string, name: string, tags: string[], by = "alice@example.com
     source: "upload",
     width: 10,
     height: 10,
+    originalSize: null,
     animated: false,
     originalBytes: 100,
     storedBytes: 10,

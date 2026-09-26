@@ -44,6 +44,7 @@ function sampleRecord(id: AssetId, tags: readonly string[] = []): AssetRecord {
     source: "upload",
     width: 10,
     height: 10,
+    originalSize: { width: 20, height: 20 },
     frames: 1,
     originalBytes: 100,
     storedBytes: 10,

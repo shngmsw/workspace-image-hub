@@ -159,6 +159,11 @@ export function parseIsoTimestamp(raw: string): IsoTimestamp | null {
   return Number.isNaN(date.getTime()) || date.toISOString() !== raw ? null : (raw as IsoTimestamp);
 }
 
+export interface PixelSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface AssetRecord {
   readonly v: 1;
   readonly id: AssetId;
@@ -167,6 +172,8 @@ export interface AssetRecord {
   readonly source: AssetSource;
   readonly width: number;
   readonly height: number;
+  /** Null only for records stored before this field existed. */
+  readonly originalSize: PixelSize | null;
   readonly frames: number;
   readonly originalBytes: number;
   readonly storedBytes: number;
@@ -192,6 +199,7 @@ export interface AssetView {
   readonly source: AssetSource;
   readonly width: number;
   readonly height: number;
+  readonly originalSize: PixelSize | null;
   readonly animated: boolean;
   readonly originalBytes: number;
   readonly storedBytes: number;
@@ -214,6 +222,7 @@ export function toView(record: AssetRecord, ctx: { readonly publicBaseUrl: strin
     source: record.source,
     width: record.width,
     height: record.height,
+    originalSize: record.originalSize,
     animated: record.frames > 1,
     originalBytes: record.originalBytes,
     storedBytes: record.storedBytes,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBytes, formatSizeChange, negotiateLocale } from "./i18n";
+import { formatBytes, formatDimensions, formatSizeChange, negotiateLocale } from "./i18n";
 
 describe("negotiateLocale", () => {
   it("prefers the pinned locale, then the cookie, then q-weighted Accept-Language", () => {
@@ -21,5 +21,11 @@ describe("sizes", () => {
     expect(formatSizeChange(3_500_000, 210_000, "en")).toBe("3.5 MB → 210 KB (94% smaller)");
     expect(formatSizeChange(3_500_000, 210_000, "ja")).toBe("3.5 MB → 210 KB（94% 削減）");
     expect(formatSizeChange(1_000, 1_500, "en")).toBe("1 KB → 1.5 KB (50% larger)");
+  });
+
+  it("shows the pixel size before and after conversion, or one size when there is nothing to compare", () => {
+    expect(formatDimensions({ width: 1024, height: 1024, originalSize: { width: 2048, height: 2048 } })).toBe("2048×2048 → 1024×1024");
+    expect(formatDimensions({ width: 128, height: 128, originalSize: { width: 128, height: 128 } })).toBe("128×128");
+    expect(formatDimensions({ width: 1024, height: 683, originalSize: null })).toBe("1024×683");
   });
 });
