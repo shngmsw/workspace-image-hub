@@ -173,11 +173,8 @@ export async function createGcsStore(options: GcsStoreOptions): Promise<AssetSto
 
     listRecords: () =>
       guard(async () => {
-        const [files] = await records.getFiles({
-          prefix: "r/",
-          autoPaginate: true,
-          fields: "items(name,metadata),nextPageToken",
-        });
+        // No `fields` projection: with it, the SDK returns raw resources instead of File objects.
+        const [files] = await records.getFiles({ prefix: "r/", autoPaginate: true });
         const list: AssetRecord[] = [];
         for (const file of files) {
           const record = decodeMetadataRecord(file.metadata.metadata?.[RECORD_METADATA_KEY]);
