@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type AssetRecord,
+  canDelete,
   cleanDisplayName,
   emailDomain,
   newAssetId,
   parseAssetId,
+  parseClientName,
   parseEmail,
   parseFileName,
   parseImageFileName,
@@ -68,5 +71,22 @@ describe("tags", () => {
     expect(parseTags(["x".repeat(33)])).toEqual({ ok: false, issue: "tag_too_long" });
     expect(parseTags(Array.from({ length: 21 }, (_, i) => `t${i}`))).toEqual({ ok: false, issue: "too_many_tags" });
     expect(parseTags(Array.from({ length: 30 }, () => "same")).ok).toBe(true);
+  });
+});
+
+describe("client names and the delete rule", () => {
+  it("accepts lowercase names of 1-32 characters", () => {
+    expect(["a", "intranet", "wiki-2", "a".repeat(32)].map(parseClientName)).toEqual(["a", "intranet", "wiki-2", "a".repeat(32)]);
+    expect(["", "-a", "a-", "A", "a_b", "a:b", "a".repeat(33)].map(parseClientName)).toEqual(Array(7).fill(null));
+  });
+
+  it("gives a client's asset to admins only in the UI", () => {
+    const alice = parseEmail("alice@example.com");
+    if (alice === null) throw new Error("email");
+    const record = { uploadedBy: { email: alice, name: "Alice" }, client: null } as unknown as AssetRecord;
+    const viaClient = { ...record, client: parseClientName("intranet") } as AssetRecord;
+    expect(canDelete({ email: alice, isAdmin: false }, record)).toBe(true);
+    expect(canDelete({ email: alice, isAdmin: false }, viaClient)).toBe(false);
+    expect(canDelete({ email: alice, isAdmin: true }, viaClient)).toBe(true);
   });
 });

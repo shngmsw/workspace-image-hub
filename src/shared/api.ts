@@ -1,6 +1,6 @@
 import type { DomainErrorCode } from "../server/errors";
 import type { AssetPatch, AssetSource, AssetView, Email, FileName, Parsed, Tag } from "./domain";
-import { parseFileName, parseSource, parseTags } from "./domain";
+import { cleanDisplayName, parseEmail, parseFileName, parseSource, parseTags } from "./domain";
 import type { Locale } from "./i18n";
 
 export const ROUTES = {
@@ -14,7 +14,12 @@ export const ROUTES = {
   uploadAsset: { method: "POST", path: "/api/assets", auth: "member", note: "raw file body + X-Upload-Meta header; 201 AssetView" },
   updateAsset: { method: "PATCH", path: "/api/assets/:id", auth: "member", note: "JSON {tags}; 200 AssetView" },
   deleteAsset: { method: "DELETE", path: "/api/assets/:id", auth: "member", note: "204; idempotent" },
+  serviceUpload: { method: "POST", path: "/api/service/v1/assets", auth: "service", note: "Bearer token; raw file body + X-Upload-Meta {filename, tags, uploadedBy}; 201 ServiceAssetView" },
+  serviceDelete: { method: "DELETE", path: "/api/service/v1/assets/:id", auth: "service", note: "Bearer token; only the client's own assets; 204; idempotent" },
 } as const;
+
+/** Server-to-server routes live under this prefix. They take a bearer token, never a cookie, and skip the Origin check. */
+export const SERVICE_API_PREFIX = "/api/service/";
 
 export type TransportErrorCode = "unauthenticated" | "cross_origin" | "invalid_input" | "too_large" | "internal";
 
@@ -84,15 +89,7 @@ export function encodeUploadMeta(meta: UploadMeta): string {
 
 export function parseUploadMeta(header: string | null | undefined): Parsed<ParsedUploadMeta> {
   const malformed = { ok: false, issue: "body_malformed" } as const;
-  if (header == null || header.length > 12_288) return malformed;
-  const bytes = fromBase64Url(header);
-  if (bytes === null) return malformed;
-  let json: unknown;
-  try {
-    json = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-  } catch {
-    return malformed;
-  }
+  const json = decodeMetaHeader(header);
   if (!isPlainObject(json) || !hasOnlyKeys(json, ["filename", "source", "tags"])) return malformed;
   const { filename, source: rawSource, tags: rawTags } = json;
   if (typeof filename !== "string" || !isStringArray(rawTags)) return malformed;
@@ -102,6 +99,43 @@ export function parseUploadMeta(header: string | null | undefined): Parsed<Parse
   if (!tags.ok) return tags;
   return { ok: true, value: { originalName: parseFileName(filename), source: source.value, tags: tags.value } };
 }
+
+/** `X-Upload-Meta` for `POST /api/service/v1/assets`. The service names the member it uploads for. */
+export interface ServiceUploadMeta {
+  readonly filename: string;
+  readonly tags: readonly string[];
+  readonly uploadedBy: { readonly email: string; readonly name?: string };
+}
+
+export interface ParsedServiceUploadMeta {
+  readonly originalName: FileName;
+  readonly tags: readonly Tag[];
+  readonly uploadedBy: { readonly email: Email; readonly name: string };
+}
+
+export function encodeServiceUploadMeta(meta: ServiceUploadMeta): string {
+  return toBase64Url(new TextEncoder().encode(JSON.stringify(meta)));
+}
+
+export function parseServiceUploadMeta(header: string | null | undefined): Parsed<ParsedServiceUploadMeta> {
+  const malformed = { ok: false, issue: "body_malformed" } as const;
+  const json = decodeMetaHeader(header);
+  if (!isPlainObject(json) || !hasOnlyKeys(json, ["filename", "tags", "uploadedBy"])) return malformed;
+  const { filename, tags: rawTags, uploadedBy } = json;
+  if (typeof filename !== "string" || !isStringArray(rawTags) || !isPlainObject(uploadedBy) || !hasOnlyKeys(uploadedBy, ["email", "name"])) {
+    return malformed;
+  }
+  const { email: rawEmail, name: rawName } = uploadedBy;
+  const email = typeof rawEmail === "string" ? parseEmail(rawEmail) : null;
+  if (email === null || (rawName !== undefined && typeof rawName !== "string")) return malformed;
+  const tags = parseTags(rawTags);
+  if (!tags.ok) return tags;
+  const name = cleanDisplayName(rawName ?? "") || email;
+  return { ok: true, value: { originalName: parseFileName(filename), tags: tags.value, uploadedBy: { email, name } } };
+}
+
+/** What the service API returns for an asset: the browser view without the viewer-specific `canDelete`. */
+export type ServiceAssetView = Omit<AssetView, "canDelete">;
 
 export interface UpdateAssetBody {
   readonly tags: readonly string[];
@@ -169,6 +203,18 @@ export interface DriveBootConfig {
   readonly clientId: string;
   readonly apiKey: string;
   readonly appId: string;
+}
+
+/** base64url JSON from an upload header; `undefined` when absent, oversized or malformed. */
+function decodeMetaHeader(header: string | null | undefined): unknown {
+  if (header == null || header.length > 12_288) return undefined;
+  const bytes = fromBase64Url(header);
+  if (bytes === null) return undefined;
+  try {
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+  } catch {
+    return undefined;
+  }
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { photoPng } from "../../test/fixtures";
-import { BOOT_ELEMENT_ID, type BootConfig, encodeUploadMeta, UPLOAD_META_HEADER } from "../shared/api";
+import {
+  BOOT_ELEMENT_ID,
+  type BootConfig,
+  encodeServiceUploadMeta,
+  encodeUploadMeta,
+  type ServiceAssetView,
+  type ServiceUploadMeta,
+  UPLOAD_META_HEADER,
+} from "../shared/api";
 import type { AssetView } from "../shared/domain";
 import { createApp } from "./app";
 import type { Auth } from "./auth";
@@ -11,6 +19,7 @@ import { HttpError } from "./errors";
 import { createHub } from "./hub";
 import { createTranscoder } from "./image";
 import type { Logger } from "./log";
+import { createServiceAuth } from "./service-auth";
 import { createMemoryStore } from "./store/memory";
 
 const quiet: Logger = { log() {} };
@@ -28,7 +37,7 @@ const stubAuth: Auth = {
   requireActor: (req) => {
     const email = req.headers.get("x-test-user");
     if (email === null) return Promise.reject(new HttpError("unauthenticated"));
-    return Promise.resolve(mintActorForTest({ email }));
+    return Promise.resolve(mintActorForTest({ email, isAdmin: email.startsWith("admin@") }));
   },
 };
 
@@ -44,7 +53,8 @@ function setup(env: Record<string, string> = {}) {
   });
   const store = createMemoryStore();
   const hub = createHub({ store, transcode: createTranscoder(config.image), publicBaseUrl: config.publicBaseUrl, log: quiet });
-  const app = createApp({ config, auth: stubAuth, hub, store, log: quiet, shellTemplate: SHELL, clientDir: "dist/client" });
+  const serviceAuth = createServiceAuth(config.serviceTokens);
+  const app = createApp({ config, auth: stubAuth, serviceAuth, hub, store, log: quiet, shellTemplate: SHELL, clientDir: "dist/client" });
   const as = (user: string | null, init: RequestInit = {}): RequestInit => ({
     ...init,
     headers: { Origin: ORIGIN, ...(user === null ? {} : { "X-Test-User": user }), ...(init.headers as Record<string, string>) },
@@ -166,5 +176,125 @@ describe("HTTP shell", () => {
     if (boot.session.state === "signed-in") expect(boot.session.assets).toHaveLength(1);
     const signedOut = bootOf(await (await app.request("/")).text());
     expect(signedOut.session.state === "signed-out" && signedOut.session.signIn.hostedDomain).toBeNull();
+  });
+});
+
+const TOKEN_A = "a".repeat(40);
+const TOKEN_A2 = "b".repeat(40);
+const TOKEN_B = "c".repeat(40);
+const SERVICE_ENV = { SERVICE_TOKENS: `alpha:${TOKEN_A},alpha:${TOKEN_A2},beta:${TOKEN_B}`, ADMIN_EMAILS: "admin@example.com" };
+const SERVICE_PATH = "/api/service/v1/assets";
+
+function serviceUpload(
+  app: ReturnType<typeof setup>["app"],
+  token: string | null,
+  bytes: Uint8Array<ArrayBuffer>,
+  meta: ServiceUploadMeta = { filename: "photo.png", tags: ["intro"], uploadedBy: { email: "alice@example.com", name: "Alice" } },
+  headers: Record<string, string> = {},
+) {
+  return app.request(SERVICE_PATH, {
+    method: "POST",
+    body: bytes,
+    headers: { ...(token === null ? {} : { Authorization: `Bearer ${token}` }), [UPLOAD_META_HEADER]: encodeServiceUploadMeta(meta), ...headers },
+  });
+}
+
+function serviceDelete(app: ReturnType<typeof setup>["app"], token: string, id: string) {
+  return app.request(`${SERVICE_PATH}/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+}
+
+describe("service API", () => {
+  it("is off without SERVICE_TOKENS", async () => {
+    const { app } = setup();
+    const res = await serviceUpload(app, TOKEN_A, await photoPng(10, 10));
+    expect(res.status).toBe(404);
+  });
+
+  it("uploads for a member without an Origin header and returns the id and public link", async () => {
+    const { app, as } = setup(SERVICE_ENV);
+    const res = await serviceUpload(app, TOKEN_A, await photoPng(1500, 1000), undefined, { Origin: "https://other.example" });
+    expect(res.status).toBe(201);
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    const asset = (await res.json()) as ServiceAssetView & { canDelete?: boolean };
+    expect(asset.url).toBe(`${ORIGIN}/i/${asset.id}.webp`);
+    expect([asset.width, asset.height]).toEqual([1024, 683]);
+    expect(asset.tags).toEqual(["intro"]);
+    expect(asset.uploadedBy).toEqual({ email: "alice@example.com", name: "Alice" });
+    expect(asset.client).toBe("alpha");
+    expect(asset.canDelete).toBeUndefined();
+    expect((await app.request(`/i/${asset.id}.webp`)).status).toBe(200);
+
+    // In the UI the asset shows up, but only an admin may delete it.
+    const listed = await app.request("/api/assets", as("alice@example.com"));
+    expect(((await listed.json()) as { assets: AssetView[] }).assets.map((a) => [a.id, a.client, a.canDelete])).toEqual([[asset.id, "alpha", false]]);
+    expect((await app.request(`/api/assets/${asset.id}`, as("alice@example.com", { method: "DELETE" }))).status).toBe(403);
+  });
+
+  it("accepts either token of a rotating client and names the member by address when no name is given", async () => {
+    const { app } = setup(SERVICE_ENV);
+    const res = await serviceUpload(app, TOKEN_A2, await photoPng(10, 10), { filename: "x.png", tags: [], uploadedBy: { email: "Bob@Example.com" } });
+    expect(res.status).toBe(201);
+    const asset = (await res.json()) as ServiceAssetView;
+    expect(asset.client).toBe("alpha");
+    expect(asset.uploadedBy).toEqual({ email: "bob@example.com", name: "bob@example.com" });
+  });
+
+  it.each([
+    ["no header", null],
+    ["unknown token", "z".repeat(40)],
+    ["prefix of a token", TOKEN_A.slice(0, 39)],
+  ])("refuses a request with %s", async (_case, token) => {
+    const { app } = setup(SERVICE_ENV);
+    const res = await serviceUpload(app, token, await photoPng(10, 10));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: { code: "unauthenticated" } });
+  });
+
+  it("ignores the session: a member cookie does not open the service API", async () => {
+    const { app, as } = setup(SERVICE_ENV);
+    const res = await app.request(SERVICE_PATH, as("admin@example.com", { method: "POST", body: await photoPng(10, 10) }));
+    expect(res.status).toBe(401);
+  });
+
+  it("does not open the member API to a token", async () => {
+    const { app } = setup(SERVICE_ENV);
+    const res = await app.request("/api/assets", { method: "POST", headers: { Authorization: `Bearer ${TOKEN_A}`, Origin: ORIGIN }, body: await photoPng(10, 10) });
+    expect(res.status).toBe(401);
+  });
+
+  it("refuses an uploader outside the allow-list and malformed metadata", async () => {
+    const { app } = setup(SERVICE_ENV);
+    const outsider = await serviceUpload(app, TOKEN_A, await photoPng(10, 10), { filename: "x.png", tags: [], uploadedBy: { email: "eve@evil.example" } });
+    expect(outsider.status).toBe(403);
+    expect(await outsider.json()).toEqual({ error: { code: "forbidden", detail: { reason: "uploader_not_allowed" } } });
+
+    const bad = await app.request(SERVICE_PATH, {
+      method: "POST",
+      body: await photoPng(10, 10),
+      headers: { Authorization: `Bearer ${TOKEN_A}`, [UPLOAD_META_HEADER]: encodeUploadMeta({ filename: "x.png", source: "upload", tags: [] }) },
+    });
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual({ error: { code: "invalid_input", detail: { issue: "body_malformed" } } });
+  });
+
+  it("deletes only the client's own assets, idempotently", async () => {
+    const { app, upload } = setup(SERVICE_ENV);
+    const mine = (await (await serviceUpload(app, TOKEN_A, await photoPng(10, 10))).json()) as ServiceAssetView;
+    const theirs = (await (await serviceUpload(app, TOKEN_B, await photoPng(10, 10))).json()) as ServiceAssetView;
+    const member = (await (await upload("alice@example.com", await photoPng(10, 10))).json()) as AssetView;
+
+    expect((await serviceDelete(app, TOKEN_A, theirs.id)).status).toBe(403);
+    expect((await serviceDelete(app, TOKEN_A, member.id)).status).toBe(403);
+    expect((await serviceDelete(app, TOKEN_A2, mine.id)).status).toBe(204);
+    expect((await app.request(`/i/${mine.id}.webp`)).status).toBe(404);
+    expect((await serviceDelete(app, TOKEN_A, mine.id)).status).toBe(204);
+    expect((await serviceDelete(app, TOKEN_A, "not-an-id")).status).toBe(204);
+    expect((await app.request(`/i/${theirs.id}.webp`)).status).toBe(200);
+  });
+
+  it("lets an admin delete a service asset from the UI", async () => {
+    const { app, as } = setup(SERVICE_ENV);
+    const asset = (await (await serviceUpload(app, TOKEN_A, await photoPng(10, 10))).json()) as ServiceAssetView;
+    expect((await app.request(`/api/assets/${asset.id}`, as("admin@example.com", { method: "DELETE" }))).status).toBe(204);
   });
 });

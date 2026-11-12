@@ -10,6 +10,7 @@ import {
   newAssetId,
   parseEmail,
   parseFileName,
+  parseClientName,
   parseTags,
   TAG_MAX_CHARS,
   TAGS_MAX,
@@ -52,6 +53,7 @@ function worstCaseRecord(char: string): AssetRecord {
     originalBytes: Number.MAX_SAFE_INTEGER,
     storedBytes: Number.MAX_SAFE_INTEGER,
     uploadedBy: { email, name: cleanDisplayName(char.repeat(DISPLAY_NAME_MAX_CHARS * 2)) },
+    client: parseClientName("a".repeat(32)),
     createdAt: extreme,
     updatedAt: extreme,
   };

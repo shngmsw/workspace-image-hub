@@ -1,8 +1,10 @@
 import {
   type AssetId,
   type AssetRecord,
+  type ClientName,
   cleanDisplayName,
   parseAssetId,
+  parseClientName,
   parseEmail,
   parseFileName,
   parseIsoTimestamp,
@@ -73,6 +75,7 @@ export function encodeRecord(record: AssetRecord): string {
     originalBytes: record.originalBytes,
     storedBytes: record.storedBytes,
     uploadedBy: { email: record.uploadedBy.email, name: record.uploadedBy.name },
+    client: record.client,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -87,7 +90,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
     return null;
   }
   if (!isObject(json) || json["v"] !== 1) return null;
-  const { id, tags, originalName, source, width, height, originalSize, frames, originalBytes, storedBytes, uploadedBy, createdAt, updatedAt } = json;
+  const { id, tags, originalName, source, width, height, originalSize, frames, originalBytes, storedBytes, uploadedBy, client, createdAt, updatedAt } = json;
 
   const parsedId = typeof id === "string" ? parseAssetId(id) : null;
   const parsedTags = Array.isArray(tags) && tags.every((t) => typeof t === "string") ? parseTags(tags) : null;
@@ -97,6 +100,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
   const created = typeof createdAt === "string" ? parseIsoTimestamp(createdAt) : null;
   const updated = typeof updatedAt === "string" ? parseIsoTimestamp(updatedAt) : null;
   const parsedOriginalSize = decodeOriginalSize(originalSize);
+  const parsedClient = decodeClient(client);
 
   if (
     parsedId?.ok !== true ||
@@ -110,6 +114,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
     !isCount(width, 1) ||
     !isCount(height, 1) ||
     parsedOriginalSize === false ||
+    parsedClient === false ||
     !isCount(frames, 1) ||
     !isCount(originalBytes, 0) ||
     !isCount(storedBytes, 0)
@@ -129,6 +134,7 @@ export function decodeRecord(raw: string): AssetRecord | null {
     originalBytes,
     storedBytes,
     uploadedBy: { email, name: cleanDisplayName(by["name"]) },
+    client: parsedClient,
     createdAt: created,
     updatedAt: updated,
   };
@@ -140,6 +146,12 @@ function decodeOriginalSize(value: unknown): PixelSize | null | false {
   if (!isObject(value)) return false;
   const { width, height } = value;
   return isCount(width, 1) && isCount(height, 1) ? { width, height } : false;
+}
+
+/** `false` when present but invalid. Absent in records stored before the field existed. */
+function decodeClient(value: unknown): ClientName | null | false {
+  if (value === undefined || value === null) return null;
+  return typeof value === "string" ? (parseClientName(value) ?? false) : false;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

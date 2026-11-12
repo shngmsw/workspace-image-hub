@@ -1,9 +1,9 @@
 import type { DriveBootConfig } from "../shared/api";
-import { type Email, emailDomain, parseEmail } from "../shared/domain";
+import { type ClientName, type Email, emailDomain, parseClientName, parseEmail } from "../shared/domain";
 import { type Locale, parseLocale } from "../shared/i18n";
 import type { TranscodePolicy } from "./image";
 
-export type EnvGroup = "Core" | "Auth" | "Google Drive import" | "Storage" | "Image policy";
+export type EnvGroup = "Core" | "Auth" | "Service API" | "Google Drive import" | "Storage" | "Image policy";
 
 export interface EnvVarSpec {
   readonly name: string;
@@ -26,6 +26,7 @@ export const ENV_VARS = [
   { name: "ALLOWED_EMAILS", group: "Auth", required: false, default: "", doc: "Comma list of individual addresses (any Google account). At least one of ALLOWED_DOMAINS / ALLOWED_EMAILS must be set." },
   { name: "ADMIN_EMAILS", group: "Auth", required: false, default: "", doc: "Comma list of members who may delete any image. Everyone else may delete only their own." },
   { name: "SESSION_TTL_HOURS", group: "Auth", required: false, default: "12", doc: "Session lifetime in hours (1..720). A member removed in Google Workspace keeps access at most this long; removing them from the allow-list cuts access on the next request." },
+  { name: "SERVICE_TOKENS", group: "Service API", required: false, default: "", secret: true, doc: "Comma list of client:token pairs for the server-to-server API, e.g. intranet:<openssl rand -base64 32>. Client names are 1-32 of a-z, 0-9 and -. Tokens are at least 32 characters. A client may have two tokens during rotation. Unset = the API is off and its routes return 404." },
   { name: "GOOGLE_PICKER_API_KEY", group: "Google Drive import", required: false, default: "", doc: "Browser API key restricted to the Picker API and the APP_URL referrer. Unset = the Drive button is hidden." },
   { name: "GOOGLE_PROJECT_NUMBER", group: "Google Drive import", required: false, default: "", doc: "Cloud project number for the Picker. Derived from GOOGLE_CLIENT_ID when unset." },
   { name: "STORAGE_DRIVER", group: "Storage", required: false, default: "local", doc: "local | gcs. local is refused on Cloud Run, whose disk is ephemeral." },
@@ -55,6 +56,11 @@ export interface AccessPolicy {
   readonly admins: ReadonlySet<Email>;
 }
 
+export interface ServiceToken {
+  readonly client: ClientName;
+  readonly token: string;
+}
+
 export interface ImagePolicy extends TranscodePolicy {
   readonly maxUploadBytes: number;
 }
@@ -70,6 +76,8 @@ export interface Config {
     readonly sessionTtlSeconds: number;
   };
   readonly access: AccessPolicy;
+  /** Empty = the service API is off. */
+  readonly serviceTokens: readonly ServiceToken[];
   readonly drive: DriveBootConfig | null;
   readonly storage: StorageConfig;
   readonly publicBaseUrl: string;
@@ -151,6 +159,11 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
   }
   const sessionTtlSeconds = int("SESSION_TTL_HOURS", 1, 720) * 3600;
 
+  const serviceTokens = parseServiceTokens(env("SERVICE_TOKENS"), issues);
+  if (serviceTokens.length > 0 && appUrl !== null && appUrl.protocol === "http:" && !["localhost", "127.0.0.1", "[::1]"].includes(appUrl.hostname)) {
+    warnings.push(`SERVICE_TOKENS is set but APP_URL ${appUrl.origin} is not https: tokens would cross the network in clear text.`);
+  }
+
   const pickerKey = env("GOOGLE_PICKER_API_KEY");
   const projectOverride = env("GOOGLE_PROJECT_NUMBER");
   if (projectOverride !== "" && !/^\d+$/u.test(projectOverride)) {
@@ -201,6 +214,7 @@ export function loadConfig(rawEnv: Readonly<Record<string, string | undefined>>)
     pinnedLocale,
     auth: { secret, clientId, sessionTtlSeconds },
     access: { domains, emails, admins },
+    serviceTokens,
     drive,
     storage,
     publicBaseUrl: derivePublicBaseUrl({ appUrl, storage, override: override === "" ? null : override }),
@@ -217,6 +231,42 @@ function splitList(raw: string): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s !== "");
+}
+
+const SERVICE_TOKEN_MIN_CHARS = 32;
+
+/** Issues never quote a token: the startup log must not leak one. */
+export function parseServiceTokens(raw: string, issues: string[]): readonly ServiceToken[] {
+  const tokens: ServiceToken[] = [];
+  const perClient = new Map<string, number>();
+  const seen = new Set<string>();
+  for (const [index, entry] of splitList(raw).entries()) {
+    const position = `SERVICE_TOKENS entry ${index + 1}`;
+    const colon = entry.indexOf(":");
+    const client = parseClientName(colon === -1 ? "" : entry.slice(0, colon).trim());
+    const token = colon === -1 ? "" : entry.slice(colon + 1).trim();
+    if (client === null) {
+      issues.push(`${position} must be client:token with a client name of 1-32 characters from a-z, 0-9 and - (not starting or ending with -).`);
+      continue;
+    }
+    if (token.length < SERVICE_TOKEN_MIN_CHARS || /\s/u.test(token)) {
+      issues.push(`${position} (${client}) needs a token of at least ${SERVICE_TOKEN_MIN_CHARS} characters without spaces (\`openssl rand -base64 32\`).`);
+      continue;
+    }
+    if (seen.has(token)) {
+      issues.push(`${position} (${client}) repeats a token. Every token must be unique.`);
+      continue;
+    }
+    const count = (perClient.get(client) ?? 0) + 1;
+    if (count > 2) {
+      issues.push(`${position}: client ${client} has more than two tokens. Two are enough to rotate.`);
+      continue;
+    }
+    perClient.set(client, count);
+    seen.add(token);
+    tokens.push({ client, token });
+  }
+  return tokens;
 }
 
 function parseAppUrl(raw: string, issues: string[]): URL | null {

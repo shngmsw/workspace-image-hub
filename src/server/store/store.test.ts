@@ -44,4 +44,23 @@ describe("record codec", () => {
   ])("rejects a record whose originalSize is present but invalid (%s)", (_case, originalSize) => {
     expect(decodeRecord(JSON.stringify({ ...legacyRecord, originalSize }))).toBeNull();
   });
+
+  it("decodes a record stored before client existed as client null", () => {
+    const decoded = decodeRecord(JSON.stringify(legacyRecord));
+    expect(decoded?.client).toBeNull();
+  });
+
+  it("round-trips client", () => {
+    const decoded = decodeRecord(JSON.stringify({ ...legacyRecord, client: "intranet" }));
+    expect(decoded?.client).toBe("intranet");
+    if (decoded === null) return;
+    expect(decodeRecord(encodeRecord(decoded))).toEqual(decoded);
+  });
+
+  it.each([["uppercase", "Intranet"], ["too long", "a".repeat(33)], ["not a string", 1]])(
+    "rejects a record whose client is present but invalid (%s)",
+    (_case, client) => {
+      expect(decodeRecord(JSON.stringify({ ...legacyRecord, client }))).toBeNull();
+    },
+  );
 });

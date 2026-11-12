@@ -18,6 +18,7 @@ function asset(id: string, name: string, tags: string[], by = "alice@example.com
     originalBytes: 100,
     storedBytes: 10,
     uploadedBy: { email: by as Email, name: by.split("@")[0] ?? by },
+    client: null,
     createdAt: "2026-01-01T00:00:00.000Z" as IsoTimestamp,
     updatedAt: "2026-01-01T00:00:00.000Z" as IsoTimestamp,
     canDelete: true,

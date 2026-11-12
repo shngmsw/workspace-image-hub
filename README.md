@@ -19,6 +19,7 @@ Sign-in is Google's "Sign in with Google" button, limited to the Workspace domai
 - Copies a link as a plain URL or as Markdown, `![file name](url)`.
 - Lists every image newest first. Search covers file names, tags, uploaders, and ids, ignores case, and treats katakana and hiragana as the same. Tag filters, tag editing, and the size before and after conversion are on every card. An image takes up to 20 tags of up to 32 characters each.
 - Lets in Workspace accounts from `ALLOWED_DOMAINS` and individual accounts from `ALLOWED_EMAILS`. `ADMIN_EMAILS` may delete anything.
+- Takes uploads from other internal apps' servers through an optional [token-based API](#server-to-server-api), off until `SERVICE_TOKENS` is set.
 - Runs from one Docker image (linux/amd64 and linux/arm64) on a local disk or on Cloud Run with Cloud Storage, with `/health`, JSON logs, and a startup check that lists every configuration problem and exits.
 - Speaks Japanese and English. `APP_LOCALE` pins one language. Otherwise the user's toggle decides, then the browser's `Accept-Language`.
 
@@ -163,6 +164,7 @@ Many Workspace organizations enforce the org policies **Domain restricted sharin
 | `ALLOWED_EMAILS` |  | Comma list of individual addresses (any Google account). At least one of ALLOWED_DOMAINS / ALLOWED_EMAILS must be set. |
 | `ADMIN_EMAILS` |  | Comma list of members who may delete any image. Everyone else may delete only their own. |
 | `SESSION_TTL_HOURS` | `12` | Session lifetime in hours (1..720). A member removed in Google Workspace keeps access at most this long; removing them from the allow-list cuts access on the next request. |
+| `SERVICE_TOKENS` |  | Comma list of client:token pairs for the server-to-server API, e.g. intranet:<openssl rand -base64 32>. Client names are 1-32 of a-z, 0-9 and -. Tokens are at least 32 characters. A client may have two tokens during rotation. Unset = the API is off and its routes return 404. |
 | `GOOGLE_PICKER_API_KEY` |  | Browser API key restricted to the Picker API and the APP_URL referrer. Unset = the Drive button is hidden. |
 | `GOOGLE_PROJECT_NUMBER` |  | Cloud project number for the Picker. Derived from GOOGLE_CLIENT_ID when unset. |
 | `STORAGE_DRIVER` | `local` | local \| gcs. local is refused on Cloud Run, whose disk is ephemeral. |
@@ -178,6 +180,37 @@ Many Workspace organizations enforce the org policies **Domain restricted sharin
 
 Startup checks the whole set, reports every problem at once, and exits with code 78. Among the refusals: an `AUTH_SECRET` shorter than 32 characters, an `APP_URL` with a path, an empty allow-list, `STORAGE_DRIVER=local` on Cloud Run, a `GCS_PUBLIC_BUCKET` equal to `GCS_BUCKET`, and a `MAX_UPLOAD_MB` above 31 on Cloud Run. An `ADMIN_EMAILS` entry that no allow-list covers is only a warning, but that admin cannot sign in.
 
+## Server-to-server API
+
+Another internal app can store images in the hub from its own server, for example an intranet that lets members paste images into a page. The browser sends the image to that app's server, the server calls the hub with a token, and the hub converts and stores the image exactly like an upload from the UI. The API is off until you set `SERVICE_TOKENS`.
+
+```dotenv
+SERVICE_TOKENS=intranet:<openssl rand -base64 32>
+```
+
+Each entry is `client:token`. The client name, 1-32 characters of `a-z`, `0-9` and `-`, is stored on every image that client uploads and shown as a badge in the library. On Cloud Run, keep the value in Secret Manager and pass it with `--set-secrets`, like `AUTH_SECRET`.
+
+**Upload.** `POST /api/service/v1/assets` with `Authorization: Bearer <token>`, the raw file as the body, and an `X-Upload-Meta` header holding base64url JSON:
+
+```json
+{ "filename": "photo.png", "tags": ["intranet"], "uploadedBy": { "email": "alice@example.com", "name": "Alice" } }
+```
+
+`uploadedBy.email` must be an address the allow-list admits (`ALLOWED_EMAILS`, or a domain in `ALLOWED_DOMAINS`). `name` is optional and defaults to the address. The answer is `201` with the asset as JSON, including `id` and `url`, the same public link the UI copies. The size limit, accepted formats, and conversion are the same as for the UI.
+
+```sh
+META=$(printf '%s' '{"filename":"photo.png","tags":["intranet"],"uploadedBy":{"email":"alice@example.com"}}' | base64 | tr '+/' '-_' | tr -d '=\n')
+curl -sS -X POST "$APP_URL/api/service/v1/assets" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Upload-Meta: $META" \
+  -H "Content-Type: application/octet-stream" --data-binary @photo.png
+```
+
+**Delete.** `DELETE /api/service/v1/assets/<id>` with the same header answers `204`, also when the image is already gone. A client may delete only the images it uploaded itself. Any other image is `403`.
+
+**Ownership.** An image uploaded through the API belongs to the client, not to the member it names. In the UI it appears in the library like any other image and its tags can be edited, but only an admin may delete it, so a member cannot break a page in the other app by deleting from the hub. Deleting does not recall cached copies, as described under [Security model](#security-model).
+
+Errors use the same JSON body as the UI API: `401 unauthenticated` for a missing or unknown token, `403 forbidden` with `detail.reason` `uploader_not_allowed` for an address outside the allow-list, `400 invalid_input` for bad metadata, and the image errors (`413`, `415`, `422`) of a normal upload.
+
 ## Security model
 
 **Sign-in.** The page renders the Sign in with Google button with a nonce that the server also stored in an HttpOnly cookie, valid for 15 minutes. The button returns a Google ID token, and the browser posts it to `POST /auth/google`. The server verifies the token's signature and audience (`GOOGLE_CLIENT_ID`) with `google-auth-library`, checks that the token's nonce matches the cookie, and only then reads the claims. There is no client secret and no redirect URI, and the server never stores a Google token.
@@ -186,9 +219,11 @@ Startup checks the whole set, reports every problem at once, and exits with code
 
 **Sessions.** The session is a signed cookie (HS256, key derived from `AUTH_SECRET`). It is `HttpOnly` and `SameSite=Lax` always, and `Secure` with the `__Host-` prefix on https. It lasts `SESSION_TTL_HOURS`, 12 by default, and there is no session store. The allow-list is evaluated again on every request, so removing an address or domain from the configuration and restarting cuts that person off at their next request. A member suspended in Workspace keeps access until the session expires. Changing `AUTH_SECRET` signs everyone out.
 
-**Requests.** Every request other than GET and HEAD must carry an `Origin` header equal to `APP_URL`, including the sign-in POST. Upload metadata travels in the `X-Upload-Meta` header, not the query string, so file names and tags stay out of proxy and Cloud Run request logs. The page ships a Content-Security-Policy that allows scripts only from the app itself and from Google's sign-in and Picker origins.
+**Requests.** Every request other than GET and HEAD must carry an `Origin` header equal to `APP_URL`, including the sign-in POST. The one exception is the server-to-server API under `/api/service/`, described next. Upload metadata travels in the `X-Upload-Meta` header, not the query string, so file names and tags stay out of proxy and Cloud Run request logs. The page ships a Content-Security-Policy that allows scripts only from the app itself and from Google's sign-in and Picker origins.
 
-**Delete.** Only the uploader or an address in `ADMIN_EMAILS` may delete an image. Anyone else gets 403. Any member may edit any image's tags. A delete removes the image first and the record second, and the link then returns 404. What a delete cannot do is recall copies. Every link is served with `Cache-Control: public, max-age=31536000, immutable`, so browsers, Google Chat, the GitHub and Notion image proxies, a CDN, and Cloud Storage's own caches may keep showing the image for a while. The confirmation dialog says so. Treat a link as public for a year from the moment you paste it anywhere.
+**Delete.** Only the uploader or an address in `ADMIN_EMAILS` may delete an image. An image uploaded through the server-to-server API can be deleted only by the client that uploaded it, or by an admin. Anyone else gets 403. Any member may edit any image's tags. A delete removes the image first and the record second, and the link then returns 404. What a delete cannot do is recall copies. Every link is served with `Cache-Control: public, max-age=31536000, immutable`, so browsers, Google Chat, the GitHub and Notion image proxies, a CDN, and Cloud Storage's own caches may keep showing the image for a while. The confirmation dialog says so. Treat a link as public for a year from the moment you paste it anywhere.
+
+**Server-to-server API.** The routes under `/api/service/` never read the session cookie, and the member routes never accept a token. They skip the `Origin` check because the check guards the cookie: a browser attaches a cookie to a cross-site request on its own, but never an `Authorization` header it was not given. They send no CORS headers, so a page on another origin cannot call them. Every configured token is compared on every request through SHA-256 digests, in constant time, and no token is ever logged. Startup refuses tokens shorter than 32 characters, and warns when tokens would travel over plain http. A client vouches for the member it names. The hub cannot verify that claim, so it only refuses addresses the allow-list would never admit. Give a token only to a server you trust as much as the hub, and rotate it by adding a second token for the same client, switching the client over, and removing the first.
 
 **Public bytes, private facts.** An image object carries no custom metadata and no EXIF. The uploader, the file name, and the tags live only in the record, in the private bucket or in `DATA_DIR/r/`. Ids come from 80 random bits, never from the clock, and the public bucket role cannot list, so nobody can enumerate the library from outside.
 

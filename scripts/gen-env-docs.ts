@@ -14,6 +14,7 @@ export const ENV_DOCS_JA: Readonly<Record<EnvName, string>> = {
   ALLOWED_EMAILS: "個別に許可するアドレスをカンマ区切りで指定（どの Google アカウントでも可）。ALLOWED_DOMAINS と ALLOWED_EMAILS の少なくとも一方が必要。",
   ADMIN_EMAILS: "すべての画像を削除できるメンバーをカンマ区切りで指定。それ以外の人は自分の画像だけ削除できる。",
   SESSION_TTL_HOURS: "セッションの有効時間（1〜720 時間）。Workspace で停止された人もこの時間までは使える。許可リストから外せば次のリクエストで締め出される。",
+  SERVICE_TOKENS: "サーバー間 API 用の client:token の組をカンマ区切りで指定（例: intranet:<openssl rand -base64 32>）。クライアント名は a-z・0-9・- の 1〜32 文字。トークンは 32 文字以上。入れ替えの間は 1 クライアントにトークンを 2 つまで持てる。未設定なら API は無効で、そのルートは 404 を返す。",
   GOOGLE_PICKER_API_KEY: "Picker API と APP_URL のリファラーに制限したブラウザ用 API キー。未設定なら Drive ボタンを出さない。",
   GOOGLE_PROJECT_NUMBER: "Picker 用の Cloud プロジェクト番号。未設定なら GOOGLE_CLIENT_ID から求める。",
   STORAGE_DRIVER: "local | gcs。local は Cloud Run では使えない（ディスクが消えるため）。",

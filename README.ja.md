@@ -19,6 +19,7 @@ Workspace Image Hub は、Google Workspace を使う組織向けのセルフホ�
 - コピーは URL そのままか、Markdown の `![ファイル名](URL)` の 2 種類です。
 - ライブラリでは全画像を新しい順に並べ、ファイル名、タグ、登録者、ID で検索できます。大文字と小文字、カタカナとひらがなの違いは無視します。タグでの絞り込み、タグの編集、変換前後のサイズ表示もあります。タグは 1 枚につき 20 個まで、1 つ 32 文字までです。
 - ログインできるのは `ALLOWED_DOMAINS` のドメインの Workspace アカウントと、`ALLOWED_EMAILS` に列挙した個別のアカウントです。`ADMIN_EMAILS` に入れた人は誰の画像でも削除できます。
+- `SERVICE_TOKENS` を設定すると、ほかの社内アプリのサーバーからも[トークン付きの API](#サーバー間-api) で登録できます。
 - Docker イメージ 1 つ（linux/amd64 と linux/arm64）で、ローカルディスクでも、Cloud Run と Cloud Storage の組み合わせでも動きます。`/health`、JSON 形式のログ、起動時の設定チェック（問題を全部並べて終了する）が付いています。
 - 画面は日本語と英語で、`APP_LOCALE` で固定できます。未設定なら利用者の切り替え、次にブラウザの言語で決めます。
 
@@ -163,6 +164,7 @@ Workspace の組織には、組織ポリシーのドメインで制限された�
 | `ALLOWED_EMAILS` |  | 個別に許可するアドレスをカンマ区切りで指定（どの Google アカウントでも可）。ALLOWED_DOMAINS と ALLOWED_EMAILS の少なくとも一方が必要。 |
 | `ADMIN_EMAILS` |  | すべての画像を削除できるメンバーをカンマ区切りで指定。それ以外の人は自分の画像だけ削除できる。 |
 | `SESSION_TTL_HOURS` | `12` | セッションの有効時間（1〜720 時間）。Workspace で停止された人もこの時間までは使える。許可リストから外せば次のリクエストで締め出される。 |
+| `SERVICE_TOKENS` |  | サーバー間 API 用の client:token の組をカンマ区切りで指定（例: intranet:<openssl rand -base64 32>）。クライアント名は a-z・0-9・- の 1〜32 文字。トークンは 32 文字以上。入れ替えの間は 1 クライアントにトークンを 2 つまで持てる。未設定なら API は無効で、そのルートは 404 を返す。 |
 | `GOOGLE_PICKER_API_KEY` |  | Picker API と APP_URL のリファラーに制限したブラウザ用 API キー。未設定なら Drive ボタンを出さない。 |
 | `GOOGLE_PROJECT_NUMBER` |  | Picker 用の Cloud プロジェクト番号。未設定なら GOOGLE_CLIENT_ID から求める。 |
 | `STORAGE_DRIVER` | `local` | local \| gcs。local は Cloud Run では使えない（ディスクが消えるため）。 |
@@ -177,6 +179,37 @@ Workspace の組織には、組織ポリシーのドメインで制限された�
 <!-- env:end -->
 
 起動時に全項目を検査し、問題を全部まとめて出してから終了コード 78 で止まります。たとえば 32 文字未満の `AUTH_SECRET`、パス付きの `APP_URL`、空の許可リスト、Cloud Run 上の `STORAGE_DRIVER=local`、`GCS_BUCKET` と同じ `GCS_PUBLIC_BUCKET`、Cloud Run 上で 31 を超える `MAX_UPLOAD_MB` は起動を拒否します。`ADMIN_EMAILS` に入れたのに許可リストに含まれないアドレスは警告だけで済みますが、その人はログインできません。
+
+## サーバー間 API
+
+ほかの社内アプリが、自分のサーバーから Hub に画像を保存できます。たとえば、メンバーがページに画像を貼り付けられるイントラネットです。ブラウザはそのアプリのサーバーへ画像を送り、サーバーがトークンを付けて Hub を呼びます。Hub は画面からのアップロードとまったく同じように変換・保存します。`SERVICE_TOKENS` を設定するまで API は無効です。
+
+```dotenv
+SERVICE_TOKENS=intranet:<openssl rand -base64 32>
+```
+
+各項目は `client:token` の形です。クライアント名（`a-z`・`0-9`・`-` の 1〜32 文字）は、そのクライアントが登録した画像すべてに記録され、一覧ではバッジとして表示されます。Cloud Run では `AUTH_SECRET` と同じく Secret Manager に置き、`--set-secrets` で渡してください。
+
+**アップロード。** `POST /api/service/v1/assets` に、`Authorization: Bearer <token>`、本文にファイルそのもの、`X-Upload-Meta` ヘッダーに base64url の JSON を付けて送ります。
+
+```json
+{ "filename": "photo.png", "tags": ["intranet"], "uploadedBy": { "email": "alice@example.com", "name": "Alice" } }
+```
+
+`uploadedBy.email` は許可リストが通すアドレス（`ALLOWED_EMAILS` にあるか、`ALLOWED_DOMAINS` のドメイン）でなければなりません。`name` は省略でき、省略時はアドレスになります。応答は `201` で、`id` と `url`（画面でコピーするのと同じ公開リンク）を含む JSON を返します。サイズ上限、対応形式、変換は画面からのアップロードと同じです。
+
+```sh
+META=$(printf '%s' '{"filename":"photo.png","tags":["intranet"],"uploadedBy":{"email":"alice@example.com"}}' | base64 | tr '+/' '-_' | tr -d '=\n')
+curl -sS -X POST "$APP_URL/api/service/v1/assets" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Upload-Meta: $META" \
+  -H "Content-Type: application/octet-stream" --data-binary @photo.png
+```
+
+**削除。** 同じヘッダーを付けた `DELETE /api/service/v1/assets/<id>` は `204` を返します。画像がすでに無いときも同じです。クライアントが消せるのは、自分が登録した画像だけです。それ以外は `403` になります。
+
+**持ち主。** API で登録した画像の持ち主は、名前を渡されたメンバーではなくクライアントです。画面の一覧にはほかの画像と同じように並び、タグも編集できますが、削除できるのは管理者だけです。メンバーが Hub 側で消して、もう一方のアプリのページを壊すことはありません。削除してもキャッシュ済みのコピーは回収できない点は、[セキュリティの仕組み](#セキュリティの仕組み)のとおりです。
+
+エラーは画面用 API と同じ JSON で返します。トークンが無いか不明なら `401 unauthenticated`、許可リスト外のアドレスなら `403 forbidden`（`detail.reason` が `uploader_not_allowed`）、メタデータの誤りは `400 invalid_input`、画像の誤りは通常のアップロードと同じ `413`・`415`・`422` です。
 
 ## セキュリティの仕組み
 
@@ -194,11 +227,15 @@ Workspace の組織には、組織ポリシーのドメインで制限された�
 
 ### リクエスト
 
-GET と HEAD 以外のリクエストは、`Origin` ヘッダーが `APP_URL` と一致しないと拒否します。ログインの POST も同じです。アップロードのメタデータはクエリ文字列ではなく `X-Upload-Meta` ヘッダーで送るので、ファイル名やタグがプロキシや Cloud Run のリクエストログに残りません。ページには Content-Security-Policy を付けていて、スクリプトはアプリ自身と Google のログインとピッカーのオリジンからしか読み込みません。
+GET と HEAD 以外のリクエストは、`Origin` ヘッダーが `APP_URL` と一致しないと拒否します。ログインの POST も同じです。例外は `/api/service/` 以下のサーバー間 API だけで、次の節で説明します。アップロードのメタデータはクエリ文字列ではなく `X-Upload-Meta` ヘッダーで送るので、ファイル名やタグがプロキシや Cloud Run のリクエストログに残りません。ページには Content-Security-Policy を付けていて、スクリプトはアプリ自身と Google のログインとピッカーのオリジンからしか読み込みません。
 
 ### 削除
 
-削除できるのは登録した本人か `ADMIN_EMAILS` の人だけで、それ以外は 403 になります。タグの編集は誰の画像でも全メンバーができます。削除は画像、記録の順に消し、以後そのリンクは 404 を返します。ただし、配布済みのコピーは回収できません。リンクは `Cache-Control: public, max-age=31536000, immutable` で配信しているので、ブラウザ、Google Chat、GitHub や Notion の画像プロキシ、CDN、Cloud Storage 側のキャッシュがしばらく画像を出し続けることがあります。削除の確認ダイアログにもそう書いてあります。どこかに貼った時点で、そのリンクは 1 年間は公開されたものと考えてください。
+削除できるのは登録した本人か `ADMIN_EMAILS` の人だけで、それ以外は 403 になります。サーバー間 API で登録した画像を消せるのは、登録したクライアントと管理者だけです。タグの編集は誰の画像でも全メンバーができます。削除は画像、記録の順に消し、以後そのリンクは 404 を返します。ただし、配布済みのコピーは回収できません。リンクは `Cache-Control: public, max-age=31536000, immutable` で配信しているので、ブラウザ、Google Chat、GitHub や Notion の画像プロキシ、CDN、Cloud Storage 側のキャッシュがしばらく画像を出し続けることがあります。削除の確認ダイアログにもそう書いてあります。どこかに貼った時点で、そのリンクは 1 年間は公開されたものと考えてください。
+
+### サーバー間 API
+
+`/api/service/` 以下のルートはセッション Cookie を一切読まず、メンバー用のルートはトークンを一切受け付けません。`Origin` の検査を外しているのは、この検査が Cookie を守るためのものだからです。ブラウザはサイトをまたぐリクエストにも Cookie を自動で付けますが、渡されていない `Authorization` ヘッダーを付けることはありません。CORS ヘッダーも返さないので、別オリジンのページからは呼べません。設定したトークンは毎回すべて、SHA-256 のダイジェストを定数時間で比較し、ログには一切出しません。32 文字未満のトークンは起動時に拒否し、平文の http でトークンが流れる設定には警告を出します。メンバーのアドレスはクライアントの申告で、Hub はそれを検証できません。できるのは、許可リストが決して通さないアドレスを拒否することだけです。トークンは Hub と同じくらい信頼できるサーバーにだけ渡してください。入れ替えるときは、同じクライアントに 2 つ目のトークンを足し、クライアント側を切り替えてから、古いほうを消します。
 
 ### 公開されるものとされないもの
 
