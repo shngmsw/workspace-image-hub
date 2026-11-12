@@ -35,6 +35,7 @@ async function main(): Promise<void> {
     storage: config.storage.driver,
     publicBaseUrl: config.publicBaseUrl,
     drive: config.drive !== null,
+    serviceClients: [...new Set(config.serviceTokens.map((t) => t.client))],
   });
 
   // Cloud Run sends SIGTERM and allows 10 s: stop accepting, let in-flight uploads finish.

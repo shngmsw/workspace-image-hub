@@ -31,7 +31,38 @@ describe("loadConfig", () => {
     expect(config.publicBaseUrl).toBe("https://img.example.com/i");
     expect(config.image).toEqual({ maxDimension: 1024, quality: 80, maxInputPixels: 100_000_000, maxUploadBytes: 20 * 1024 * 1024 });
     expect(config.drive).toBeNull();
+    expect(config.serviceTokens).toEqual([]);
     expect(config.warnings).toEqual([]);
+  });
+
+  it("parses SERVICE_TOKENS, with two tokens per client for rotation", () => {
+    const a = "A+/=".repeat(10);
+    const b = "b".repeat(32);
+    const config = loadConfig({ ...base, SERVICE_TOKENS: ` intranet:${a} , intranet:${b},wiki-2:${"c".repeat(32)}` });
+    expect(config.serviceTokens).toEqual([
+      { client: "intranet", token: a },
+      { client: "intranet", token: b },
+      { client: "wiki-2", token: "c".repeat(32) },
+    ]);
+  });
+
+  it("rejects bad SERVICE_TOKENS entries without quoting the token", () => {
+    const secret = "s".repeat(31);
+    const issues = issuesOf({
+      ...base,
+      SERVICE_TOKENS: [`short:${secret}`, `Upper:${"u".repeat(32)}`, "missing-colon", `x:${"d".repeat(32)}`, `y:${"d".repeat(32)}`, `z:${"e".repeat(32)}`, `z:${"f".repeat(32)}`, `z:${"g".repeat(32)}`].join(","),
+    });
+    expect(issues).toHaveLength(5);
+    expect(issues.join("\n")).not.toContain(secret);
+    expect(issues.join("\n")).not.toContain("d".repeat(32));
+    expect(issues[0]).toContain("(short) needs a token of at least 32 characters");
+    expect(issues[3]).toContain("repeats a token");
+    expect(issues[4]).toContain("client z has more than two tokens");
+  });
+
+  it("warns when tokens would travel over plain http", () => {
+    const config = loadConfig({ ...base, APP_URL: "http://hub.lan:3000", SERVICE_TOKENS: `a:${"x".repeat(32)}` });
+    expect(config.warnings.some((w) => w.startsWith("SERVICE_TOKENS is set but APP_URL"))).toBe(true);
   });
 
   it("refuses to start with empty allow-lists, and treats FOO= as unset", () => {

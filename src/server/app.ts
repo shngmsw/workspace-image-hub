@@ -9,7 +9,10 @@ import {
   type ErrorBody,
   parseAuthErrorCode,
   parseUpdateAssetBody,
+  ROUTES,
+  parseServiceUploadMeta,
   parseUploadMeta,
+  SERVICE_API_PREFIX,
   type SignedInBoot,
   type SignedOutBoot,
   UPLOAD_META_HEADER,
@@ -23,11 +26,13 @@ import { HttpError, HubError, httpStatusOf } from "./errors";
 import type { Hub } from "./hub";
 import { ACCEPTED_MIME_TYPES } from "./image";
 import type { Logger } from "./log";
+import { requireAllowedUploader, type ServiceAuth } from "./service-auth";
 import { type AssetStore, IMAGE_CACHE_CONTROL } from "./store/store";
 
 export interface AppDeps {
   readonly config: Config;
   readonly auth: Auth;
+  readonly serviceAuth: ServiceAuth;
   readonly hub: Hub;
   readonly store: Pick<AssetStore, "openImage">;
   readonly log: Logger;
@@ -54,13 +59,17 @@ const STATIC_TYPES: Readonly<Record<string, string>> = {
 };
 
 export function createApp(deps: AppDeps): Hono {
-  const { config, auth, hub, store, log } = deps;
+  const { config, auth, serviceAuth, hub, store, log } = deps;
   const app = new Hono();
 
   app.onError((error) => errorResponse(error, log));
   app.notFound(() => Response.json({ error: { code: "not_found" } } satisfies ErrorBody, { status: 404, headers: NO_STORE }));
   app.use("*", async (c, next) => {
-    if (c.req.method !== "GET" && c.req.method !== "HEAD" && c.req.header("Origin") !== config.appUrl.origin) {
+    // The Origin check stops cross-site requests that ride the session cookie. Service routes never
+    // read the cookie and take a bearer token that a browser does not attach on its own, so they
+    // skip it. They send no CORS headers either: a page on another origin cannot call them.
+    const service = c.req.path.startsWith(SERVICE_API_PREFIX);
+    if (!service && c.req.method !== "GET" && c.req.method !== "HEAD" && c.req.header("Origin") !== config.appUrl.origin) {
       throw new HttpError("cross_origin");
     }
     await next();
@@ -127,6 +136,25 @@ export function createApp(deps: AppDeps): Hono {
     if (id.ok) await hub.remove(actor, id.value);
     return c.body(null, 204, NO_STORE);
   });
+
+  // Server-to-server API. Registered only when SERVICE_TOKENS is set; otherwise these paths 404.
+  if (serviceAuth.enabled) {
+    app.post(ROUTES.serviceUpload.path, async (c) => {
+      const client = serviceAuth.requireClient(c.req.raw);
+      const meta = parseServiceUploadMeta(c.req.header(UPLOAD_META_HEADER));
+      if (!meta.ok) throw new HttpError("invalid_input", { issue: meta.issue });
+      requireAllowedUploader(meta.value.uploadedBy.email, config.access);
+      const bytes = await readBodyCapped(c.req.raw, config.image.maxUploadBytes);
+      return c.json(await hub.ingestForClient(client, { ...meta.value, bytes }), 201, NO_STORE);
+    });
+
+    app.delete(ROUTES.serviceDelete.path, async (c) => {
+      const client = serviceAuth.requireClient(c.req.raw);
+      const id = parseAssetId(c.req.param("id"));
+      if (id.ok) await hub.removeForClient(client, id.value);
+      return c.body(null, 204, NO_STORE);
+    });
+  }
 
   app.get("/static/:file", async (c) => {
     const file = c.req.param("file");

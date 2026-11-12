@@ -49,6 +49,7 @@ function sampleRecord(id: AssetId, tags: readonly string[] = []): AssetRecord {
     originalBytes: 100,
     storedBytes: 10,
     uploadedBy: { email: "alice@example.com" as Email, name: "Alice" },
+    client: null,
     createdAt: at,
     updatedAt: at,
   };

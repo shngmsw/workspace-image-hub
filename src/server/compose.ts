@@ -6,6 +6,7 @@ import type { Config } from "./config";
 import { createHub } from "./hub";
 import { createTranscoder } from "./image";
 import type { Logger } from "./log";
+import { createServiceAuth } from "./service-auth";
 import { createGcsStore } from "./store/gcs";
 import { createLocalStore } from "./store/local";
 import type { AssetStore } from "./store/store";
@@ -29,6 +30,7 @@ export async function composeApp(config: Config, log: Logger, shell: ShellFiles,
   return createApp({
     config,
     auth: overrides.auth ?? createAuth(config, log),
+    serviceAuth: createServiceAuth(config.serviceTokens),
     hub: createHub({ store, transcode: createTranscoder(config.image), publicBaseUrl: config.publicBaseUrl, log }),
     store,
     log,

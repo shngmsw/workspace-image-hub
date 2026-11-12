@@ -62,6 +62,7 @@ export function AssetCard({ asset, index, activeTagKeys, onToggleTag, onSaveTags
         <span className="absolute right-2 top-2 flex gap-1">
           {asset.animated && <Badge>{t.assets.animated}</Badge>}
           {asset.source === "drive" && <Badge>{t.assets.fromDrive}</Badge>}
+          {asset.client !== null && <Badge>{t.assets.viaClient(asset.client)}</Badge>}
         </span>
       </a>
 

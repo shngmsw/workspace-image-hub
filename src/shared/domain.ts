@@ -148,6 +148,18 @@ export function parseSource(raw: unknown): Parsed<AssetSource> {
   return raw === "upload" || raw === "drive" ? ok(raw) : fail("source_unknown");
 }
 
+/**
+ * Name of a server-to-server client, taken from SERVICE_TOKENS. Recorded on every asset that client
+ * uploads, so that it can delete only its own assets.
+ */
+export type ClientName = Brand<string, "ClientName">;
+
+export const CLIENT_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/u;
+
+export function parseClientName(raw: string): ClientName | null {
+  return CLIENT_NAME_PATTERN.test(raw) ? (raw as ClientName) : null;
+}
+
 export type IsoTimestamp = Brand<string, "IsoTimestamp">;
 
 export function isoTimestamp(date: Date): IsoTimestamp {
@@ -178,6 +190,8 @@ export interface AssetRecord {
   readonly originalBytes: number;
   readonly storedBytes: number;
   readonly uploadedBy: { readonly email: Email; readonly name: string };
+  /** The service client that uploaded the asset; null for uploads from the UI. */
+  readonly client: ClientName | null;
   readonly createdAt: IsoTimestamp;
   readonly updatedAt: IsoTimestamp;
 }
@@ -204,19 +218,26 @@ export interface AssetView {
   readonly originalBytes: number;
   readonly storedBytes: number;
   readonly uploadedBy: { readonly email: Email; readonly name: string };
+  readonly client: ClientName | null;
   readonly createdAt: IsoTimestamp;
   readonly updatedAt: IsoTimestamp;
   readonly canDelete: boolean;
 }
 
+/**
+ * An asset a service client uploaded belongs to that client: the app that holds its link removes
+ * it through the service API, so in the UI only admins may delete it.
+ */
 export function canDelete(viewer: Viewer, record: AssetRecord): boolean {
-  return viewer.isAdmin || viewer.email === record.uploadedBy.email;
+  if (viewer.isAdmin) return true;
+  return record.client === null && viewer.email === record.uploadedBy.email;
 }
 
-export function toView(record: AssetRecord, ctx: { readonly publicBaseUrl: string; readonly viewer: Viewer }): AssetView {
+/** The view of an asset that does not depend on who is looking. */
+export function toPlainView(record: AssetRecord, publicBaseUrl: string): Omit<AssetView, "canDelete"> {
   return {
     id: record.id,
-    url: `${ctx.publicBaseUrl}/${record.id}.webp`,
+    url: `${publicBaseUrl}/${record.id}.webp`,
     tags: record.tags,
     originalName: record.originalName,
     source: record.source,
@@ -227,10 +248,14 @@ export function toView(record: AssetRecord, ctx: { readonly publicBaseUrl: strin
     originalBytes: record.originalBytes,
     storedBytes: record.storedBytes,
     uploadedBy: record.uploadedBy,
+    client: record.client,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
-    canDelete: canDelete(ctx.viewer, record),
   };
+}
+
+export function toView(record: AssetRecord, ctx: { readonly publicBaseUrl: string; readonly viewer: Viewer }): AssetView {
+  return { ...toPlainView(record, ctx.publicBaseUrl), canDelete: canDelete(ctx.viewer, record) };
 }
 
 export function applyPatch(record: AssetRecord, patch: AssetPatch, now: IsoTimestamp): AssetRecord {

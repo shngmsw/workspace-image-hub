@@ -87,6 +87,7 @@ export interface Messages {
     readonly loading: string;
     readonly uploadedBy: (name: string, date: string) => string;
     readonly fromDrive: string;
+    readonly viaClient: (client: string) => string;
     readonly animated: string;
     readonly editTags: string;
     readonly tagsPlaceholder: string;
@@ -150,6 +151,7 @@ export const en: Messages = {
     loading: "Loading…",
     uploadedBy: (name, date) => `${name} · ${date}`,
     fromDrive: "Drive",
+    viaClient: (client) => `via ${client}`,
     animated: "Animated",
     editTags: "Edit tags",
     tagsPlaceholder: "Comma-separated tags",
@@ -236,6 +238,7 @@ export const ja: Messages = {
     loading: "読み込み中…",
     uploadedBy: (name, date) => `${name}・${date}`,
     fromDrive: "ドライブ",
+    viaClient: (client) => `${client} 経由`,
     animated: "アニメーション",
     editTags: "タグを編集",
     tagsPlaceholder: "タグをカンマ区切りで入力",
